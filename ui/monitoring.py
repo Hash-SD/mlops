@@ -222,13 +222,109 @@ def render_promotion_buttons(current_version: str):
     updater = ModelUpdater()
     archiver = ModelArchiver()
     
+    # Tutorial Section - Collapsed by default
+    with st.expander("📚 **TUTORIAL: Cara Upload & Simpan Model** (Klik untuk membuka)", expanded=False):
+        st.markdown("""
+        ## 📖 Panduan Lengkap Manajemen Model untuk Admin
+        
+        ---
+        
+        ### 🎯 **LANGKAH 1: Persiapan File Model**
+        
+        Sebelum upload, pastikan Anda memiliki file-file berikut:
+        
+        | File | Keterangan | Wajib? |
+        |------|------------|--------|
+        | `model_pipeline.pkl` | File model utama (Naive Bayes + TF-IDF) | ✅ Ya |
+        | `preprocessor.pkl` | File preprocessor untuk text cleaning | ⚪ Opsional |
+        | `training_config.json` | Konfigurasi dan metrics model | ⚪ Auto-generate |
+        
+        **Format yang didukung:** `.pkl` (pickle file)
+        
+        ---
+        
+        ### 🔐 **LANGKAH 2: Login sebagai Admin**
+        
+        1. Buka **Sidebar** (panel kiri)
+        2. Scroll ke bawah, klik **"👤 Akses Admin"**
+        3. Masukkan **password admin**
+        4. Klik tombol **"🔓 Masuk"**
+        5. Jika berhasil, akan muncul **"✅ Admin Logged In"**
+        
+        ⚠️ **Penting:** Tanpa login admin, Anda tidak bisa upload atau restore model!
+        
+        ---
+        
+        ### 📤 **LANGKAH 3: Upload Model Baru**
+        
+        1. Pilih tab **"📤 Update Model"** di bawah tutorial ini
+        2. Klik **"Browse files"** pada bagian **"Upload File Model Baru"**
+        3. Pilih file `.pkl` model Anda
+        4. (Opsional) Upload juga file preprocessor
+        5. Isi **Metrics Model**:
+           - **Akurasi Model**: Nilai 0-1 (contoh: 0.75 = 75%)
+           - **F1 Score**: Nilai 0-1 (contoh: 0.73 = 73%)
+           - **Training Samples**: Jumlah data training (contoh: 1000)
+        6. Tulis **Alasan Update** (contoh: "Model baru dengan balanced data")
+        7. Klik tombol **"🚀 Update Model Sekarang"**
+        
+        ---
+        
+        ### ✅ **LANGKAH 4: Verifikasi Model**
+        
+        Setelah upload berhasil:
+        1. Buka halaman **"🔮 Prediksi"**
+        2. Pilih versi model yang baru diupload
+        3. Coba lakukan prediksi untuk memastikan model berfungsi
+        
+        ---
+        
+        ### 🔄 **FITUR TAMBAHAN**
+        
+        | Fitur | Keterangan |
+        |-------|------------|
+        | **📦 Archive Management** | Lihat & kelola model lama yang di-backup |
+        | **🔄 Restore** | Kembalikan model lama jika ada masalah |
+        | **⚖️ Model Comparison** | Bandingkan performa model lama vs baru |
+        | **📋 Update History** | Lihat riwayat semua update model |
+        
+        ---
+        
+        ### ⚠️ **CATATAN PENTING**
+        
+        - ✅ Model lama akan **otomatis di-backup** sebelum diganti
+        - ✅ Anda bisa **rollback/restore** kapan saja jika ada masalah
+        - ✅ Semua update tercatat di **Update History**
+        - ❌ Jangan upload file yang bukan format `.pkl`
+        - ❌ Pastikan metrics yang diisi akurat untuk tracking
+        
+        ---
+        
+        ### 🆘 **Butuh Bantuan?**
+        
+        Jika mengalami error saat upload:
+        1. Pastikan file `.pkl` valid dan tidak corrupt
+        2. Pastikan sudah login sebagai admin
+        3. Cek koneksi internet (jika menggunakan cloud database)
+        4. Hubungi tim teknis jika masalah berlanjut
+        """)
+    
+    st.markdown("---")
+    
     # Create tabs for different model management features
-    mgmt_tab1, mgmt_tab2, mgmt_tab3, mgmt_tab4 = st.tabs([
+    mgmt_tab1, mgmt_tab2, mgmt_tab3, mgmt_tab4, mgmt_tab5 = st.tabs([
         "📤 Update Model",
+        "🚀 Model Promotion",
         "📦 Archive Management",
         "⚖️ Model Comparison",
         "📋 Update History"
     ])
+    
+    # Check admin authentication status
+    is_admin = st.session_state.get('admin_authenticated', False)
+    
+    if not is_admin:
+        st.warning("⚠️ **Login sebagai Admin diperlukan** untuk menggunakan fitur ini. Buka Sidebar → Akses Admin → Masukkan Password")
     
     # TAB 1: Update Model
     with mgmt_tab1:
@@ -352,8 +448,138 @@ def render_promotion_buttons(current_version: str):
             else:
                 st.warning("⚠️ Silakan upload file model terlebih dahulu")
     
-    # TAB 2: Archive Management
+    # TAB 2: Model Promotion
     with mgmt_tab2:
+        st.markdown("#### 🚀 Model Promotion")
+        st.markdown("""
+        Promosikan model antar stage untuk deployment yang terkelola.
+        """)
+        
+        # Current model status
+        st.markdown("##### 📊 Status Model Saat Ini")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        # Get current model info
+        current_stage = "Production"  # Default stage
+        
+        with col1:
+            st.info(f"""
+            **🇮🇩 Model v1 (Indonesian)**
+            - Stage: `{current_stage}`
+            - Status: ✅ Aktif
+            """)
+        
+        with col2:
+            st.info(f"""
+            **🇺🇸 Model v2 (English)**
+            - Stage: `{current_stage}`
+            - Status: ✅ Aktif
+            """)
+        
+        with col3:
+            # Check for staging models
+            staging_models = archiver.list_archived_models()
+            staging_count = len([m for m in staging_models if 'staging' in m.get('notes', '').lower()])
+            st.info(f"""
+            **📦 Staging Models**
+            - Total: {staging_count}
+            - Siap promosi: {staging_count}
+            """)
+        
+        st.markdown("---")
+        
+        # Promotion Actions
+        st.markdown("##### 🔄 Aksi Promosi Model")
+        
+        promotion_col1, promotion_col2 = st.columns(2)
+        
+        with promotion_col1:
+            st.markdown("**Staging → Production**")
+            st.caption("Promosikan model dari staging ke production")
+            
+            # Select model to promote
+            staging_models_list = archiver.list_archived_models()
+            
+            if staging_models_list:
+                selected_staging = st.selectbox(
+                    "Pilih model dari staging:",
+                    options=range(len(staging_models_list)),
+                    format_func=lambda i: f"{staging_models_list[i]['version']} - {staging_models_list[i]['archived_at'][:10]}",
+                    key="staging_select"
+                )
+                
+                if st.button("⬆️ Promosikan ke Production", use_container_width=True, disabled=not is_admin):
+                    if is_admin:
+                        with st.spinner("Mempromosikan model..."):
+                            try:
+                                selected_model = staging_models_list[selected_staging]
+                                success, result = updater.rollback_to_archive(selected_model['path'])
+                                
+                                if success:
+                                    st.success("✅ Model berhasil dipromosikan ke Production!")
+                                    st.json(result)
+                                else:
+                                    st.error("❌ Promosi gagal")
+                            except Exception as e:
+                                st.error(f"❌ Error: {str(e)}")
+                    else:
+                        st.warning("⚠️ Login admin diperlukan")
+            else:
+                st.info("📭 Tidak ada model di staging")
+        
+        with promotion_col2:
+            st.markdown("**Production → Archive**")
+            st.caption("Archive model production saat ini")
+            
+            archive_notes = st.text_input(
+                "Catatan archive:",
+                placeholder="Contoh: Archived untuk backup sebelum update",
+                key="archive_notes_input"
+            )
+            
+            if st.button("⬇️ Archive Model Production", use_container_width=True, disabled=not is_admin):
+                if is_admin:
+                    with st.spinner("Mengarchive model..."):
+                        try:
+                            # Get current metrics
+                            current_config_path = Path('models/saved_model/training_config.json')
+                            current_metrics = {}
+                            if current_config_path.exists():
+                                with open(current_config_path, 'r') as f:
+                                    config = json.load(f)
+                                current_metrics = config.get('metrics', {})
+                            
+                            archive_path = archiver.archive_model(
+                                version=current_version,
+                                current_model_path='models/saved_model',
+                                metrics=current_metrics,
+                                notes=archive_notes or "Manual archive from production"
+                            )
+                            
+                            st.success(f"✅ Model berhasil di-archive!")
+                            st.info(f"📁 Lokasi: `{archive_path}`")
+                        except Exception as e:
+                            st.error(f"❌ Error: {str(e)}")
+                else:
+                    st.warning("⚠️ Login admin diperlukan")
+        
+        st.markdown("---")
+        
+        # Promotion History
+        st.markdown("##### 📜 Riwayat Promosi")
+        
+        history = updater.list_update_history(limit=5)
+        
+        if history:
+            for idx, record in enumerate(history):
+                status_icon = "✅" if record.get('success') else "❌"
+                st.text(f"{status_icon} {record.get('timestamp', 'N/A')[:10]} - {record.get('reason', 'N/A')[:50]}")
+        else:
+            st.info("📭 Belum ada riwayat promosi")
+    
+    # TAB 3: Archive Management
+    with mgmt_tab3:
         st.markdown("#### Manajemen Archive Model")
         st.markdown("""
         Kelola versi model lama yang sudah di-archive:
@@ -437,8 +663,8 @@ def render_promotion_buttons(current_version: str):
         else:
             st.info("📭 Belum ada model yang di-archive")
     
-    # TAB 3: Model Comparison
-    with mgmt_tab3:
+    # TAB 4: Model Comparison
+    with mgmt_tab4:
         st.markdown("#### Bandingkan Model Versi Lama vs Baru")
         st.markdown("""
         Lihat perbandingan detail antara:
@@ -550,8 +776,8 @@ def render_promotion_buttons(current_version: str):
         else:
             st.info("Belum ada model archive untuk dibandingkan")
     
-    # TAB 4: Update History
-    with mgmt_tab4:
+    # TAB 5: Update History
+    with mgmt_tab5:
         st.markdown("#### Riwayat Update Model")
         st.markdown("Melihat semua update model yang pernah dilakukan")
         
