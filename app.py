@@ -379,7 +379,8 @@ def main():
     
     # Page: Monitoring
     elif selected_page == "📊 Monitoring":
-        st.title("📊 Dashboard Monitoring")
+        st.title("📊 Monitoring & Manajemen Model")
+        st.caption("Pantau performa model dan kelola deployment secara real-time")
         st.markdown("---")
         try:
             render_monitoring_dashboard(monitoring_service=monitoring_service)

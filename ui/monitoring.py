@@ -866,8 +866,6 @@ def render_monitoring_dashboard(monitoring_service):
     Args:
         monitoring_service: MonitoringService instance untuk fetch data
     """
-    st.markdown("## 📊 Monitoring Dashboard")
-    st.markdown("Monitor performa model dan deteksi anomali secara real-time.")
     
     try:
         # Fetch metrics summary
