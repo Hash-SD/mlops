@@ -297,6 +297,35 @@ def load_css():
         [data-testid="stMetricValue"] {
             padding-top: 5px !important; /* Tambahan jarak halus */
         }
+        
+        /* Mobile Responsive Adjustments */
+        @media only screen and (max-width: 768px) {
+            /* Further reduce header spacing on mobile */
+            .stApp h1 {
+                font-size: 1.5rem !important;
+                margin-bottom: 3px !important;
+            }
+            
+            /* Smaller subtitle text on mobile */
+            .stApp p {
+                font-size: 0.85rem !important;
+            }
+            
+            /* Ensure result cards don't overflow */
+            .glass-card {
+                padding: 20px !important;
+            }
+            
+            /* Smaller result heading on mobile to prevent wrapping */
+            .glass-card h2 {
+                font-size: 1.1rem !important;
+                white-space: nowrap !important;
+            }
+            
+            /* Adjust confidence display on mobile */
+            .glass-card p {
+                font-size: 0.75rem !important;
+            }
+        }
         </style>
     """, unsafe_allow_html=True)
-
