@@ -40,13 +40,13 @@ def load_css():
             background-color: var(--background);
             font-family: 'Inter', sans-serif;
             color: var(--text-main);
-            font-size: 1rem !important; /* Base Body Text: 16px (normal) */
+            font-size: 0.9rem !important; /* Base Body Text: ~14.4px */
         }
         
-        h1 { font-size: 3rem !important; font-weight: 800 !important; }
-        h2 { font-size: 2.25rem !important; font-weight: 700 !important; }
-        h3 { font-size: 1.75rem !important; font-weight: 600 !important; }
-        h4 { font-size: 1.5rem !important; font-weight: 600 !important; }
+        h1 { font-size: 2.5rem !important; font-weight: 800 !important; }
+        h2 { font-size: 2rem !important; font-weight: 700 !important; }
+        h3 { font-size: 1.5rem !important; font-weight: 600 !important; }
+        h4 { font-size: 1.25rem !important; font-weight: 600 !important; }
         
         h1, h2, h3, h4 {
             font-family: 'Outfit', sans-serif !important;
@@ -56,28 +56,28 @@ def load_css():
         
         /* Paragraphs & Lists */
         p, li {
-            font-size: 1rem !important;
+            font-size: 0.9rem !important;
             line-height: 1.6 !important;
         }
         
         /* Captions / Small Text */
         .stCaption, small, .small-text, [data-testid="stCaptionContainer"] {
-            font-size: 0.875rem !important; /* ~14px */
+            font-size: 0.8rem !important; /* ~12.8px */
             color: var(--text-muted) !important;
         }
 
         /* Sidebar Specific Upscaling */
         [data-testid="stSidebar"] p, [data-testid="stSidebar"] div, [data-testid="stSidebar"] span {
-             font-size: 0.95rem !important;
+             font-size: 0.875rem !important;
         }
 
         [data-testid="stSidebar"] h3 {
-             font-size: 1.125rem !important; /* ~18px */
+             font-size: 1rem !important; /* ~16px */
              font-weight: 700 !important;
-             padding-top: 25px !important;      /* Increased from 15px */
-             padding-bottom: 15px !important;   /* Increased from 5px */
-             margin-top: 15px !important;       /* Added extra top margin */
-             margin-bottom: 10px !important;    /* Increased from 0px */
+             padding-top: 20px !important;
+             padding-bottom: 12px !important;
+             margin-top: 12px !important;
+             margin-bottom: 8px !important;
              line-height: 1.3;
              text-transform: uppercase;
              letter-spacing: 0.05em;
@@ -95,7 +95,7 @@ def load_css():
 
         /* Upscale Radio Button Labels (Navigation) */
         [data-testid="stSidebar"] .stRadio label p {
-             font-size: 1.05rem !important; /* Navigation text */
+             font-size: 0.95rem !important; /* Navigation text */
         }
         
         /* Add spacing between radio options */
@@ -131,14 +131,14 @@ def load_css():
         
         /* Inputs (Text Area, Input, Selectbox) */
         .stTextArea textarea, .stTextInput input, .stSelectbox div[data-baseweb="select"] {
-            font-size: 1rem !important;
+            font-size: 0.9rem !important;
             font-family: 'Inter', sans-serif !important;
         }
         
         /* Buttons */
         div.stButton > button {
-            font-size: 1rem !important;
-            padding: 0.8rem 1.5rem !important;
+            font-size: 0.9rem !important;
+            padding: 0.7rem 1.3rem !important;
         }
 
         /* --- CONTAINER CENTERING --- */
