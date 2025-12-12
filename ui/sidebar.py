@@ -1,44 +1,12 @@
 """
-Sidebar components with modern UI design style.
-Updates: Organized hierarchy, clear navigation, and User Mode toggle.
+Sidebar components restored to original navigation logic but with modern styling.
+Includes Team Section as requested.
 """
 
 import streamlit as st
-import time
 from config.settings import settings
 
-# ... (Previous helper functions for admin kept as internal helpers) ...
-import hashlib
-
-def _hash_password(password: str) -> str:
-    salt = "mlops_admin_salt_2024"
-    return hashlib.sha256(f"{salt}{password}".encode()).hexdigest()
-
-def _verify_admin_password(input_password: str) -> bool:
-    return input_password == settings.ADMIN_PASSWORD
-
-def _check_admin_session() -> bool:
-    return st.session_state.get('admin_authenticated', False)
-
-def _login_admin(password: str) -> bool:
-    if _verify_admin_password(password):
-        st.session_state['admin_authenticated'] = True
-        st.session_state['admin_login_time'] = time.time()
-        return True
-    return False
-
-def _logout_admin():
-    st.session_state['admin_authenticated'] = False
-    st.session_state.pop('admin_login_time', None)
-
-def _check_session_timeout(timeout_minutes: int = 30) -> bool:
-    login_time = st.session_state.get('admin_login_time', 0)
-    if login_time == 0:
-        return True
-    elapsed = time.time() - login_time
-    return elapsed > (timeout_minutes * 60)
-
-# Model Metadata definitions (Kept)
+# Model Metadata definitions
 MODEL_METADATA = {
     'v1': {
         'name': 'NB Indonesian Sentiment',
@@ -68,12 +36,12 @@ def render_sidebar(retraining_service=None) -> str:
         # 1. Header & Branding
         st.markdown(
             f"""
-            <div style="margin-bottom: 20px;">
-                <h1 style="font-size: 1.8rem; margin: 0; display:flex; align-items:center; gap:10px;">
-                    {settings.APP_ICON} 
-                    <span style="color: #1a73e8;">Text</span>AI
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div class="sidebar-logo-icon">🔎</div>
+                <h1 style="font-size: 3.5rem !important; margin: 0; font-weight: 800; letter-spacing: -2px; line-height: 1.2; color: #1E293B;">
+                    insightext
                 </h1>
-                <p style="color: #5f6368; margin: 0; font-size: 0.9rem;">
+                <p style="color: #64748B; margin-top: 10px; font-size: 1.2rem !important;">
                     Enterprise Sentiment Analysis
                 </p>
             </div>
@@ -81,7 +49,7 @@ def render_sidebar(retraining_service=None) -> str:
             unsafe_allow_html=True
         )
         
-        # 2. User Mode Selection (Crucial for UX)
+        # 2. User Mode Selection
         st.markdown("### 👤 User Mode")
         mode = st.radio(
             "Select Interface Mode",
@@ -100,9 +68,8 @@ def render_sidebar(retraining_service=None) -> str:
             
         st.divider()
 
-        # 3. Main Navigation
+        # 3. Main Navigation (Restored)
         st.markdown("### 🧭 Navigation")
-        # Use a more visual style using standard radio for now, custom CSS handles the rest
         selected_page = st.radio(
             "Go to",
             options=["🔮 Prediksi", "📊 Monitoring", "🚀 Model Management"],
@@ -141,24 +108,34 @@ def render_sidebar(retraining_service=None) -> str:
             st.session_state['dont_save_data'] = dont_save
             st.session_state['user_consent'] = not dont_save
 
-        # 5. Admin Actions (Only in Expert Mode or separate?)
-        # Let's keep it accessible but unobtrusive
-        if selected_page == "🚀 Model Management":
-             # Logic handled in main page, but maybe login here if needed? 
-             # For now, keep simple.
-             pass
+        st.divider()
+
+        # 5. Tim Pengembang (New List)
+        st.markdown("### 👥 Tim Pengembang")
+        team_members = [
+            "Hermawan Manurung",
+            "Pardi Octaviando",
+            "Najla Juwairia",
+            "Dea Mutia Risani",
+            "Presilia"
+        ]
+        
+        # Build HTML string first
+        team_html = '<div style="background-color: #F8FAFC; padding: 15px; border-radius: 8px; border: 1px solid #E2E8F0;">'
+        for member in team_members:
+             team_html += f"<div style='margin-bottom: 5px; color: #475569; font-weight: 500;'>• {member}</div>"
+        team_html += '</div>'
+        
+        st.markdown(team_html, unsafe_allow_html=True)
 
         # Footer
         st.markdown(
             """
-            <div style="position: fixed; bottom: 20px; font-size: 0.8rem; color: #9aa0a6;">
-                v2.1.0 • Built with Streamlit
+            <div style="margin-top: 30px; font-size: 0.8rem; color: #9aa0a6; text-align: center;">
+                Made by Kelompok 6-RA
             </div>
             """,
             unsafe_allow_html=True
         )
         
     return selected_page
-
-# ... (Retraining Button function logic can be imported/kept if needed, 
-# but for main UI refactor, I'm focusing on the structure provided above)

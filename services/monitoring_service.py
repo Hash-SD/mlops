@@ -115,27 +115,67 @@ class MonitoringService:
     
     def calculate_drift_score(self) -> float:
         """
-        Calculate data drift score (placeholder implementation).
+        Calculate data drift score based on recent prediction statistics.
         
-        Real implementation would compare current data distribution
-        dengan training data distribution.
+        Uses confidence score variance as a proxy for drift:
+        - Higher variance in recent predictions = potential drift
+        - Compares recent window vs baseline statistics
         
         Returns:
             float: Drift score (0-1, higher = more drift)
         """
         try:
-            self.logger.info("Calculating drift score (placeholder)")
+            self.logger.info("Calculating drift score from database statistics")
             
-            # Placeholder: return random value between 0 and 0.5
-            # Real implementation would:
-            # 1. Get recent predictions
-            # 2. Calculate distribution statistics
-            # 3. Compare with baseline distribution
-            # 4. Calculate KL divergence or similar metric
+            # Get recent predictions (last 50) and historical baseline (last 500)
+            recent_query = """
+                SELECT confidence, prediction
+                FROM predictions
+                ORDER BY timestamp DESC
+                LIMIT 50
+            """
             
-            drift_score = random.uniform(0.0, 0.5)
+            baseline_query = """
+                SELECT confidence, prediction
+                FROM predictions
+                ORDER BY timestamp DESC
+                LIMIT 500
+            """
             
-            self.logger.info(f"Drift score calculated: {drift_score:.4f}")
+            recent_data = self.db_manager.execute_query(recent_query)
+            baseline_data = self.db_manager.execute_query(baseline_query)
+            
+            # If not enough data, return low drift
+            if len(recent_data) < 10 or len(baseline_data) < 50:
+                self.logger.warning("Insufficient data for drift calculation")
+                return 0.1
+            
+            # Extract confidence scores
+            recent_confidences = [row['confidence'] for row in recent_data]
+            baseline_confidences = [row['confidence'] for row in baseline_data]
+            
+            # Calculate statistics
+            import statistics
+            
+            recent_mean = statistics.mean(recent_confidences)
+            baseline_mean = statistics.mean(baseline_confidences)
+            recent_stdev = statistics.stdev(recent_confidences) if len(recent_confidences) > 1 else 0
+            baseline_stdev = statistics.stdev(baseline_confidences) if len(baseline_confidences) > 1 else 0
+            
+            # Calculate drift components
+            # 1. Mean shift (normalized)
+            mean_shift = abs(recent_mean - baseline_mean)
+            
+            # 2. Variance change (ratio)
+            variance_change = abs(recent_stdev - baseline_stdev) / (baseline_stdev + 0.01)
+            
+            # Combine into drift score (weighted average)
+            drift_score = min(0.6 * mean_shift + 0.4 * variance_change, 1.0)
+            
+            self.logger.info(
+                f"Drift score calculated: {drift_score:.4f} "
+                f"(mean_shift={mean_shift:.4f}, var_change={variance_change:.4f})"
+            )
             return drift_score
             
         except Exception as e:
@@ -397,8 +437,8 @@ class MonitoringService:
             
             latency_data = [row['latency'] for row in latency_results]
             
-            # Calculate drift score (placeholder - no DB call needed)
-            drift_score = random.uniform(0.0, 0.5)
+            # Calculate drift score from database statistics
+            drift_score = self.calculate_drift_score()
             
             self.logger.info(
                 f"⚡ Dashboard data fetched: {len(metrics_summary)} versions, "

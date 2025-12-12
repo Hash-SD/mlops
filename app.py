@@ -1,12 +1,12 @@
 """
 Main Streamlit application untuk Sistem AI Berbasis Teks.
-Entry point untuk aplikasi MLOps dengan redesign modern (Material Design).
+Entry point untuk aplikasi MLOps dengan redesign modern (Single Column Layout).
 """
 
 import streamlit as st
 import logging
 from config.settings import settings
-from utils.logger import setup_logger, log_error
+from utils.logger import setup_logger
 
 # Import database & services
 from database.db_manager import DatabaseManager
@@ -18,7 +18,7 @@ from services.retraining_service import RetrainingService
 
 # Import New UI Components
 from ui.sidebar import render_sidebar
-from ui.main_area import render_input_section, render_results_section, render_prediction_button
+from ui.main_area import render_main_layout, render_empty_state, render_result_section, render_example_buttons
 from ui.monitoring import render_monitoring_dashboard
 from ui.model_management import render_model_management_page
 from ui.styles import load_css
@@ -38,10 +38,8 @@ def initialize_session_state():
         'dont_save_data': False,
         'prediction_history': [],
         'current_prediction': None,
-        'retraining_status': 'idle',
-        'text_input_area': "", # Changed from text_input to match main_area.py key
-        'user_mode': 'Beginner',
-        'show_retrain_confirmation': False
+        'text_input_area': "",
+        'user_mode': 'Beginner'
     }
     
     for key, value in defaults.items():
@@ -85,7 +83,7 @@ def main():
     st.set_page_config(
         page_title=settings.APP_TITLE,
         page_icon=settings.APP_ICON,
-        layout="wide",
+        layout="wide", # We restrict width via CSS, but keep wide for background
         initial_sidebar_state="expanded"
     )
     
@@ -107,77 +105,113 @@ def main():
     selected_page = render_sidebar(retraining_service)
     
     # 5. Page Routing
-    if selected_page == "🔮 Prediksi":
-        st.markdown(f"## {settings.APP_TITLE}")
+    if selected_page == "Dashboard" or selected_page == "🔮 Prediksi":
+        # --- NEW MAIN LAYOUT ---
         
-        # --- NEW LAYOUT: 2 Columns ---
-        col_input, col_result = st.columns([1, 1], gap="large")
+        # A. Render Header & Input & Action
+        text_input, analyze_clicked = render_main_layout()
         
-        with col_input:
-            # 1. Render Input Card
-            text_input = render_input_section() # Returns text
-            
-            # 2. Render Action Button
-            is_valid = len(text_input) >= settings.MIN_INPUT_LENGTH
-            if not is_valid and text_input:
-                st.warning(f"Minimal {settings.MIN_INPUT_LENGTH} karakter.")
-                
-            button_clicked = render_prediction_button(enabled=is_valid)
-            
-            # 3. Validation & Logic
-            if button_clicked and is_valid:
-                with st.spinner("🤖 Menganalisis sentimen..."):
-                    try:
-                        result = prediction_service.predict(
-                            text=text_input,
-                            model_version=st.session_state.selected_model_version,
-                            user_consent=st.session_state.user_consent
-                        )
-                        st.session_state.current_prediction = result
-                        
-                        # Add to local history display immediately
-                        if 'prediction_history' not in st.session_state: st.session_state.prediction_history = []
-                        st.session_state.prediction_history.insert(0, result)
-                        
-                    except Exception as e:
-                        st.error(f"Error: {e}")
-                        logger.error(f"Prediction error: {e}")
+        # B. Handle Prediction Logic
+        if analyze_clicked and text_input:
+            with st.spinner("🤖 Menganalisis sentimen..."):
+                try:
+                    result = prediction_service.predict(
+                        text=text_input,
+                        model_version=st.session_state.selected_model_version,
+                        user_consent=st.session_state.user_consent
+                    )
+                    st.session_state.current_prediction = result
+                    
+                    # Add to local history (optional, currently not displayed prominently in new design)
+                    if 'prediction_history' not in st.session_state: 
+                        st.session_state.prediction_history = []
+                    st.session_state.prediction_history.insert(0, result)
+                    
+                except Exception as e:
+                    st.error(f"Error: {e}")
+                    logger.error(f"Prediction error: {e}")
         
-        with col_result:
-            # 4. Render Result Card
-            # Always render the result section, it handles empty state internally
-            render_results_section(st.session_state.current_prediction)
+        # C. Render Output: Either Result OR Nothing (Empty State Removed)
+        if st.session_state.current_prediction:
+            render_result_section(st.session_state.current_prediction)
+        # Else: Do nothing (Clean interface as requested)
             
-        # 5. History Section (Full Width below)
+        # D. Examples (Always at bottom for engagement)
         st.markdown("---")
-        st.subheader("📜 Riwayat")
-        # Reuse existing logic for history (simplified)
+        render_example_buttons()
+
+
+        # E. History Section (Restored)
+        st.markdown("---")
+        st.markdown("### 📜 Riwayat Prediksi Terakhir")
+        
         try:
+             # Fetch recent history
              history = db_manager.get_recent_predictions(limit=5)
              if history:
-                 # Simplified table or reuse component
-                 # We can reuse the old component or just show simple table
-                 st.dataframe(
-                     [{'Waktu': h['timestamp'], 'Text': h['text_input'], 'Prediksi': h['prediction']} for h in history],
-                     use_container_width=True,
-                     hide_index=True
-                 )
+                 # Start building HTML string
+                 full_html = '<div class="glass-card">'
+                 
+                 full_html += """
+                 <table class="glass-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 20%;">Waktu</th>
+                            <th style="width: 45%;">Teks</th>
+                            <th style="width: 20%;">Prediksi</th>
+                            <th style="width: 15%;">Confidence</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                 """
+                 
+                 for h in history:
+                     time_str = h.get('timestamp', '')[:16].replace('T', ' ')
+                     text = h.get('text_input', '')
+                     # Truncate long text
+                     if len(text) > 50: text = text[:50] + "..."
+                     
+                     pred = h.get('prediction', '').lower()
+                     conf = h.get('confidence', 0)  # Fixed: changed from 'confidence_score' to 'confidence'
+                     
+                     # Badge class
+                     badge_class = "badge-neu"
+                     if "posit" in pred: badge_class = "badge-pos"
+                     elif "negat" in pred: badge_class = "badge-neg"
+                     
+                     full_html += f"""<tr>
+<td>{time_str}</td>
+<td style="font-style: italic;">"{text}"</td>
+<td><span class="{badge_class}">{pred.capitalize()}</span></td>
+<td>{conf:.1%}</td>
+</tr>"""
+                     
+                 full_html += "</tbody></table></div>"
+                 st.markdown(full_html, unsafe_allow_html=True)
+                 
              else:
-                 st.info("Belum ada riwayat.")
-        except:
-             pass
+                 st.info("Belum ada riwayat prediksi.")
+        except Exception as e:
+             st.error(f"Gagal memuat riwayat: {e}")
 
-    elif selected_page == "📊 Monitoring":
+    elif selected_page == "Monitoring" or selected_page == "📊 Monitoring":
         st.title("📊 Monitoring Dashboard")
-        st.markdown("---")
         render_monitoring_dashboard(monitoring_service)
         
-    elif selected_page == "🚀 Model Management":
-        st.title("🚀 Model Management") 
-        # Note: We need to import the admin logic or keep it here.
-        # Ideally, we should have refactored the admin logic into the page function itself.
-        # But previous code had logic in sidebar? No, render_model_management_page handles it.
+    elif selected_page == "Management" or selected_page == "🚀 Model Management":
+        # Title handled inside render_model_management_page for custom styling
         render_model_management_page()
+
+    # Footer
+    st.markdown(
+        """
+        <div class="footer">
+            Powered by TextAI Engine <br>
+            Made with ❤️ by Tim Pengembang | © 2025
+        </div>
+        """, 
+        unsafe_allow_html=True
+    )
 
 if __name__ == "__main__":
     main()

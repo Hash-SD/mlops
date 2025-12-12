@@ -1,160 +1,133 @@
 """
-Main area components refactored for split-screen layout and modern UI.
+Main area components refactored for new Single Column Vertical Layout.
+Matches 'CogniDesk' reference: Title -> Input -> Empty State/Result -> Examples.
 """
 
 import streamlit as st
-import plotly.graph_objects as go
-import pandas as pd
-import uuid
-from typing import Dict, Any, Optional, List
-from datetime import datetime
 from config.settings import settings
+from typing import Dict, Any
 
-def render_input_section() -> str:
+def render_main_layout() -> str:
     """
-    Render clean input section within a card-like visual.
+    Renders the entire main content area.
     Returns:
-        str: Input text
+        str: The text input to be analyzed (if Action triggered)
     """
-    # Container for Input "Card"
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    
-    st.markdown('<div class="card-header">📝 Input Analysis</div>', unsafe_allow_html=True)
-    st.caption("Masukkan teks ulasan atau komentar pelanggan untuk dianalisis.")
-    
-    # Model context
-    model_version = st.session_state.get('selected_model_version', 'v1')
-    
-    # Examples
-    examples = {
-        'v1': {
-            "Positif": "Luar biasa! Produk ini sangat bagus.",
-            "Negatif": "Sangat mengecewakan, tidak akan beli lagi."
-        },
-        'v2': {
-            "Positive": "This is amazing, highly recommended!",
-            "Negative": "Terrible experience, waste of money."
-        }
-    }
-    
-    # Pill-like buttons for examples
-    current_examples = examples.get(model_version, examples['v1'])
-    cols = st.columns(len(current_examples))
-    for i, (label, text) in enumerate(current_examples.items()):
-        if cols[i].button(f"📌 {label}", key=f"ex_{i}", use_container_width=True):
-             st.session_state['text_input_area'] = text
-
-    # Text Area
-    initial_val = st.session_state.get('text_input_area', "")
-    text = st.text_area(
-        label="Input Text",
-        value=initial_val,
-        height=200,
-        placeholder="Ketik atau tempel teks di sini...",
-        key='text_input_area',
-        label_visibility="collapsed"
-    )
-    
-    # Char Counter
-    if text:
-        st.caption(f"{len(text)}/{settings.MAX_INPUT_LENGTH} karakter")
-    
-    st.markdown('</div>', unsafe_allow_html=True) # End card
-    
-    return text
-
-def render_prediction_button(enabled: bool = True) -> bool:
-    """
-    Render primary action button.
-    """
-    # Using columns to center or stretch
-    if st.button("🔍 ANalisis SEKARANG", type="primary", disabled=not enabled, use_container_width=True):
-        return True
-    return False
-
-def render_results_section(prediction_result: Dict[str, Any]):
-    """
-    Render results in a card layout. 
-    Adapts based on User Mode (Beginner vs Expert).
-    """
-    if not prediction_result:
-        # Empty state
-        st.markdown(
-            """
-            <div class="card" style="text-align: center; color: #9aa0a6; padding: 40px;">
-                <h3>👈 Menunggu Input</h3>
-                <p>Silakan masukkan teks dan tekan tombol analisis</p>
-                <div style="font-size: 3rem; opacity: 0.3;">📊</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-        return
-
-    # Helper function for colors
-    def get_color(pred):
-        p = pred.lower()
-        if p in ['positif', 'positive']: return '#34A853', '😊' # Google Green
-        if p in ['negatif', 'negative']: return '#EA4335', '😠' # Google Red
-        return '#FBBC04', '😐' # Google Yellow/Neutral
-
-    pred_label = prediction_result.get('prediction', 'Unknown')
-    confidence = prediction_result.get('confidence', 0.0)
-    color, icon = get_color(pred_label)
-    
-    user_mode = st.session_state.get('user_mode', 'Beginner')
-    
-    # Result Card
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown('<div class="card-header">🎯 Hasil Analisis</div>', unsafe_allow_html=True)
-    
-    # Hero/Highlighted Result
+    # 1. Header with Icon
     st.markdown(
-        f"""
-        <div style="background-color: {color}15; border-left: 5px solid {color}; padding: 20px; border-radius: 4px; margin-bottom: 20px;">
-            <h2 style="color: {color}; margin:0; display:flex; align-items:center; gap: 10px;">
-                {icon} {pred_label.upper()}
-            </h2>
-            <p style="margin:0; color: #3c4043; font-weight: 500;">
-                Tingkat Keyakinan: {confidence:.0%}
-            </p>
-        </div>
-        """, 
-        unsafe_allow_html=True
-    )
-    
-    # Additional Metrics for Expert Mode
-    if user_mode == "Expert":
-        st.markdown("#### 🔬 Technical Metrics")
-        cols = st.columns(2)
-        with cols[0]:
-            st.metric("Latency", f"{prediction_result.get('latency', 0)*1000:.0f} ms")
-        with cols[1]:
-            st.metric("Model", prediction_result.get('metadata', {}).get('version', 'N/A'))
-            
-        # Confidence Bar Chart (Simple)
-        st.markdown("#### Confidence Distribution")
-        _render_simple_bar(confidence, color)
-        
-        # Raw Data Expander
-        with st.expander("📋 View JSON Output"):
-            st.json(prediction_result)
-            
-    st.markdown('</div>', unsafe_allow_html=True) # End card
-
-def _render_simple_bar(value, color):
-    """Simple HTML/CSS bar to avoid overhead of Plotly for simple bars."""
-    st.markdown(
-        f"""
-        <div style="background-color: #f1f3f4; border-radius: 4px; height: 8px; width: 100%; margin-top: 5px;">
-            <div style="background-color: {color}; width: {value*100}%; height: 100%; border-radius: 4px;"></div>
-        </div>
-        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #5f6368; margin-top: 4px;">
-            <span>0%</span>
-            <span>{value:.1%}</span>
-            <span>100%</span>
+        """
+        <div style="text-align: center; margin-bottom: 40px;">
+            <h1 style="font-size: 2.5rem; margin-bottom: 10px;">✨ Identifikasi Sentimen</h1>
+            <p style="color: #64748B;">Analisis emosi dan sentimen dari teks ulasan pelanggan secara instan.</p>
         </div>
         """,
         unsafe_allow_html=True
     )
+
+    # 2. Input Section
+    st.markdown("### 📝 Input Teks")
+    
+    # Handle Examples State
+    if 'text_input_area' not in st.session_state:
+        st.session_state.text_input_area = ""
+
+    # Text Area
+    text_input = st.text_area(
+        "Input Text",
+        value=st.session_state.text_input_area,
+        height=150,
+        placeholder="Ketik ulasan di sini atau pilih contoh di bawah...",
+        label_visibility="collapsed"
+    )
+    
+    # Character Counter (Subtle)
+    if text_input:
+        st.caption(f"{len(text_input)}/{settings.MAX_INPUT_LENGTH} karakter")
+    
+    # Action Button
+    col_btn, _ = st.columns([1, 2]) # Limit button width slightly? No, full width is better in mobile, let's stick to simple.
+    analyze_clicked = st.button("🔍 Analisis Sekarang", type="primary", use_container_width=True, disabled=not text_input)
+    
+    return text_input, analyze_clicked
+
+def render_empty_state():
+    """Renders the dotted empty state box."""
+    st.markdown(
+        """
+        <div class="empty-state-box">
+            <div style="font-size: 3rem; opacity: 0.5;">📁</div>
+            <h3 style="margin: 10px 0 0 0; color: #475569;">Belum ada teks dipilih</h3>
+            <p style="font-size: 0.9rem; margin: 0;">Silakan ketik teks di atas atau gunakan contoh di bawah untuk memulai analisis.</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+def render_example_buttons():
+    """Renders the 'Coba Contoh Gambar' (Text equivalent) section."""
+    st.markdown("### 🧪 Coba Contoh Teks")
+    st.caption("Tidak punya teks? Klik salah satu tombol di bawah untuk mencoba demo:")
+    
+    # Example Data
+    examples = [
+        ("👍 Positif", "Luar biasa! Produk ini sangat membantu pekerjaan saya sehari-hari.", "v1"),
+        ("👎 Negatif", "Sangat mengecewakan, aplikasi sering crash dan lambat.", "v1"),
+        ("😐 Netral", "Pengiriman standar, barang sampai sesuai estimasi waktu.", "v1")
+    ]
+    
+    # Custom Grid for Buttons
+    cols = st.columns(3)
+    for i, (label, text, ver) in enumerate(examples):
+        # We use a callback to set state
+        if cols[i].button(label, key=f"ex_btn_{i}", use_container_width=True):
+            st.session_state.text_input_area = text
+            st.rerun() # Force reload to populate text area
+
+def render_result_section(prediction_result: Dict[str, Any]):
+    """
+    Render results in a clean glass card.
+    """
+    if not prediction_result:
+        return
+
+    pred_label = prediction_result.get('prediction', 'Unknown')
+    confidence = prediction_result.get('confidence', 0.0)
+    
+    # Colors
+    color_map = {
+        'positif': ('#10B981', '😊'), # Green
+        'positive': ('#10B981', '😊'),
+        'negatif': ('#EF4444', '😠'), # Red
+        'negative': ('#EF4444', '😠'),
+        'netral': ('#F59E0B', '😐')   # Amber
+    }
+    
+    color, icon = color_map.get(pred_label.lower(), ('#64748B', '❓'))
+    
+    st.markdown(
+        f"""<div class="glass-card" style="border-left: 5px solid {color}; margin-top: 20px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <p style="color: #64748B; margin-bottom: 5px; font-size: 0.9rem;">Hasil Analisis</p>
+                    <h2 style="color: {color}; margin: 0; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 2rem;">{icon}</span> {pred_label.upper()}
+                    </h2>
+                </div>
+                <div style="text-align: right;">
+                    <p style="font-size: 2rem; font-weight: 700; color: #1E293B; margin: 0;">{confidence:.0%}</p>
+                    <p style="color: #64748B; margin: 0; font-size: 0.8rem;">Confidence</p>
+                </div>
+            </div>
+            {_render_progress_bar_html(confidence, color)}
+        </div>""",
+        unsafe_allow_html=True
+    )
+    
+    # Expert Details
+    if st.session_state.get('user_mode') == 'Expert':
+        with st.expander("🔬 Technical Details"):
+            st.json(prediction_result)
+
+def _render_progress_bar_html(value, color):
+    return f"""<div style="background-color: #F1F5F9; border-radius: 99px; height: 6px; width: 100%; margin-top: 15px; overflow: hidden;"><div style="background-color: {color}; width: {value*100}%; height: 100%; border-radius: 99px;"></div></div>"""
 
