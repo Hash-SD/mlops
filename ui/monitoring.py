@@ -820,7 +820,7 @@ def render_prediction_distribution(metrics_summary: Dict[str, Dict[str, Any]]):
     Args:
         metrics_summary: Metrics summary dari monitoring service
     """
-    st.markdown("###  Frekuensi Prediksi")
+    st.markdown("###  📊 Frekuensi Prediksi")
     
     if not metrics_summary:
         st.info("Belum ada data distribusi tersedia")
@@ -899,22 +899,17 @@ def render_monitoring_dashboard(monitoring_service):
         
         st.markdown("---")
 
-        # Tabs for better organization (Model Management moved to dedicated page)
-        tab1, tab2 = st.tabs(["📈 Overview", "⏱️ Performa & Latency"])
+        # Display all metrics in single view (no tabs needed)
+        render_metrics_table(metrics_summary)
         
-        with tab1:
-            st.subheader("📐 Evaluasi Model")
-            render_metrics_table(metrics_summary)
-            
-            st.markdown("---")
-            render_prediction_distribution(metrics_summary)
-            
-            st.markdown("---")
-            render_drift_score(drift_score)
-
-        with tab2:
-            st.subheader("⏱️ Analisis Latency")
-            render_latency_histogram(latency_data, selected_version)
+        st.markdown("---")
+        render_prediction_distribution(metrics_summary)
+        
+        st.markdown("---")
+        render_latency_histogram(latency_data, selected_version)
+        
+        st.markdown("---")
+        render_drift_score(drift_score)
             
     except ConnectionError as e:
         st.error(f"❌ Gagal terhubung ke database: {str(e)}")
