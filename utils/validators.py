@@ -1,7 +1,55 @@
 """Input validation utility for MLOps Streamlit Text AI application."""
 
+import re
+import html
 from typing import Tuple
 from config.settings import settings
+
+# Security: Dangerous patterns to block (SQL injection, XSS, command injection)
+DANGEROUS_PATTERNS = [
+    r'<script[^>]*>.*?</script>',  # XSS script tags
+    r'javascript:',                 # JavaScript protocol
+    r'on\w+\s*=',                   # Event handlers (onclick, onerror, etc.)
+    r'(\b(SELECT|INSERT|UPDATE|DELETE|DROP|UNION|ALTER)\b.*\b(FROM|INTO|TABLE|WHERE)\b)',  # SQL injection
+    r'[;&|`$]',                     # Command injection characters
+    r'\.\./|\.\.\\',               # Path traversal
+]
+
+
+def sanitize_text_input(text: str) -> str:
+    """
+    Sanitize user input to prevent XSS and injection attacks.
+    
+    Security: Escapes HTML entities and removes dangerous patterns.
+    """
+    if not text:
+        return text
+    
+    # HTML escape to prevent XSS
+    sanitized = html.escape(text)
+    
+    # Remove null bytes (security risk)
+    sanitized = sanitized.replace('\x00', '')
+    
+    return sanitized
+
+
+def contains_dangerous_patterns(text: str) -> Tuple[bool, str]:
+    """
+    Check if text contains potentially dangerous patterns.
+    
+    Security: Detects SQL injection, XSS, and command injection attempts.
+    """
+    if not text:
+        return False, ""
+    
+    text_lower = text.lower()
+    
+    for pattern in DANGEROUS_PATTERNS:
+        if re.search(pattern, text_lower, re.IGNORECASE | re.DOTALL):
+            return True, "Input mengandung karakter atau pola yang tidak diizinkan"
+    
+    return False, ""
 
 
 def validate_text_input(text: str) -> Tuple[bool, str]:
@@ -21,6 +69,11 @@ def validate_text_input(text: str) -> Tuple[bool, str]:
     
     if not text_stripped:
         return False, "Input teks tidak boleh kosong"
+    
+    # Security: Check for dangerous patterns (SQL injection, XSS, etc.)
+    is_dangerous, danger_msg = contains_dangerous_patterns(text_stripped)
+    if is_dangerous:
+        return False, danger_msg
     
     if len(text_stripped) < settings.MIN_INPUT_LENGTH:
         return False, f"Input teks minimal {settings.MIN_INPUT_LENGTH} karakter"

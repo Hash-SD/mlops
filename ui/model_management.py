@@ -5,7 +5,7 @@ import logging
 import time
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 
 from config.settings import settings
 from models.model_archiver import ModelArchiver
@@ -16,23 +16,87 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
-# ADMIN AUTHENTICATION
+# ADMIN AUTHENTICATION (with rate limiting)
 # =============================================================================
 
+# Security: Rate limiting constants
+MAX_LOGIN_ATTEMPTS = 5
+LOCKOUT_DURATION_SECONDS = 300  # 5 minutes
+
+
+def _get_login_attempts() -> int:
+    """Get current failed login attempts count."""
+    return st.session_state.get('login_attempts', 0)
+
+
+def _increment_login_attempts():
+    """Increment failed login attempts and set lockout time if exceeded."""
+    attempts = _get_login_attempts() + 1
+    st.session_state['login_attempts'] = attempts
+    if attempts >= MAX_LOGIN_ATTEMPTS:
+        st.session_state['lockout_time'] = time.time()
+
+
+def _reset_login_attempts():
+    """Reset login attempts after successful login."""
+    st.session_state['login_attempts'] = 0
+    st.session_state.pop('lockout_time', None)
+
+
+def _is_locked_out() -> Tuple[bool, int]:
+    """
+    Check if user is locked out due to too many failed attempts.
+    
+    Security: Prevents brute force attacks on admin login.
+    Returns: (is_locked, remaining_seconds)
+    """
+    lockout_time = st.session_state.get('lockout_time', 0)
+    if lockout_time == 0:
+        return False, 0
+    
+    elapsed = time.time() - lockout_time
+    if elapsed < LOCKOUT_DURATION_SECONDS:
+        remaining = int(LOCKOUT_DURATION_SECONDS - elapsed)
+        return True, remaining
+    
+    # Lockout expired, reset
+    _reset_login_attempts()
+    return False, 0
+
+
 def _verify_admin_password(input_password: str) -> bool:
-    return input_password == settings.ADMIN_PASSWORD
+    """Verify admin password with constant-time comparison to prevent timing attacks."""
+    import hmac
+    return hmac.compare_digest(input_password, settings.ADMIN_PASSWORD)
 
 
 def _check_admin_session() -> bool:
     return st.session_state.get('admin_authenticated', False)
 
 
-def _login_admin(password: str) -> bool:
+def _login_admin(password: str) -> Tuple[bool, str]:
+    """
+    Attempt admin login with rate limiting.
+    
+    Security: Implements rate limiting to prevent brute force attacks.
+    Returns: (success, message)
+    """
+    # Check lockout first
+    is_locked, remaining = _is_locked_out()
+    if is_locked:
+        return False, f"🔒 Terlalu banyak percobaan. Coba lagi dalam {remaining} detik."
+    
     if _verify_admin_password(password):
         st.session_state['admin_authenticated'] = True
         st.session_state['admin_login_time'] = time.time()
-        return True
-    return False
+        _reset_login_attempts()
+        return True, "Login sukses!"
+    
+    _increment_login_attempts()
+    attempts_left = MAX_LOGIN_ATTEMPTS - _get_login_attempts()
+    if attempts_left > 0:
+        return False, f"Password salah! ({attempts_left} percobaan tersisa)"
+    return False, "🔒 Akun terkunci. Coba lagi dalam 5 menit."
 
 
 def _logout_admin():
@@ -61,26 +125,32 @@ def render_admin_login_section() -> bool:
     else:
         st.warning("🔒 **Login Required** - Masukkan password admin untuk mengakses fitur manajemen")
         
-        c1, c2 = st.columns([3, 1])
-        with c1:
-            password = st.text_input(
-                "Password Admin",
-                type="password",
-                placeholder="🔑 Masukkan password...",
-                key="mgmt_admin_pass",
-                label_visibility="collapsed"
-            )
-        with c2:
-            if st.button("🔓 Login", use_container_width=True):
-                if password:
-                    if _login_admin(password):
-                        st.success("Login sukses!")
-                        time.sleep(0.5)
-                        st.rerun()
+        # Security: Check if locked out before showing login form
+        is_locked, remaining = _is_locked_out()
+        if is_locked:
+            st.error(f"🔒 Terlalu banyak percobaan gagal. Coba lagi dalam {remaining} detik.")
+        else:
+            c1, c2 = st.columns([3, 1])
+            with c1:
+                password = st.text_input(
+                    "Password Admin",
+                    type="password",
+                    placeholder="🔑 Masukkan password...",
+                    key="mgmt_admin_pass",
+                    label_visibility="collapsed"
+                )
+            with c2:
+                if st.button("🔓 Login", use_container_width=True):
+                    if password:
+                        success, message = _login_admin(password)
+                        if success:
+                            st.success(message)
+                            time.sleep(0.5)
+                            st.rerun()
+                        else:
+                            st.error(message)
                     else:
-                        st.error("Password salah!")
-                else:
-                    st.warning("Isi password!")
+                        st.warning("Isi password!")
     
     return _check_admin_session()
 
