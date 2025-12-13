@@ -23,8 +23,17 @@ def render_main_layout() -> Tuple[str, bool]:
         unsafe_allow_html=True
     )
 
-    # Input Section
-    st.markdown("### 📝 Input Teks")
+    # Input Section - Dynamic based on selected model
+    selected_model = st.session_state.get('selected_model_version', 'v1')
+    
+    if selected_model == 'v2':
+        input_label = "### 📝 Input English Text"
+        placeholder_text = "Enter a review with at least 7 words or choose an example below..."
+    else:
+        input_label = "### 📝 Input Teks Bahasa Indonesia"
+        placeholder_text = "Masukkan ulasan minimal 7 kata atau pilih contoh di bawah..."
+    
+    st.markdown(input_label)
     
     if 'text_input_area' not in st.session_state:
         st.session_state.text_input_area = ""
@@ -33,7 +42,7 @@ def render_main_layout() -> Tuple[str, bool]:
         "Input Text",
         value=st.session_state.text_input_area,
         height=150,
-        placeholder="Masukkan ulasan minimal 7 kata atau pilih contoh di bawah...",
+        placeholder=placeholder_text,
         label_visibility="collapsed"
     )
     
