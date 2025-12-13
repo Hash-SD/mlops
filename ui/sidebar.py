@@ -37,7 +37,7 @@ def render_sidebar(retraining_service=None) -> str:
         st.markdown(
             f"""
             <div style="text-align: center; margin-bottom: 30px;">
-                <div class="sidebar-logo-icon">🔎</div>
+                <div style="font-size: 2.5rem; margin-bottom: 10px;">🔎</div>
                 <h1 style="font-size: 3.5rem !important; margin: 0; font-weight: 800; letter-spacing: -2px; line-height: 1.2; color: #1E293B;">
                     insightext
                 </h1>
