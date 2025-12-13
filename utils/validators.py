@@ -29,8 +29,8 @@ def validate_text_input(text: str) -> Tuple[bool, str]:
         return False, f"Input teks maksimal {settings.MAX_INPUT_LENGTH} karakter"
     
     word_count = len(text_stripped.split())
-    if word_count < 7:
-        return False, f"Input teks minimal 7 kata (saat ini: {word_count} kata)"
+    if word_count < settings.MIN_WORDS:
+        return False, f"Input teks minimal {settings.MIN_WORDS} kata (saat ini: {word_count} kata)"
     
     return True, ""
 

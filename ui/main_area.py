@@ -37,14 +37,23 @@ def render_main_layout() -> Tuple[str, bool]:
         label_visibility="collapsed"
     )
     
+    # Word count validation
+    word_count = len(text_input.split()) if text_input else 0
+    min_words = settings.MIN_WORDS
+    is_valid_input = word_count >= min_words
+    
+    # Display input info
     if text_input:
-        st.caption(f"{len(text_input)}/{settings.MAX_INPUT_LENGTH} karakter")
+        if is_valid_input:
+            st.caption(f"✅ {word_count} kata | {len(text_input)}/{settings.MAX_INPUT_LENGTH} karakter")
+        else:
+            st.warning(f"⚠️ Input minimal {min_words} kata. Saat ini: {word_count} kata (kurang {min_words - word_count} kata lagi)")
     
     analyze_clicked = st.button(
         "🔍 Analisis Sekarang",
         type="primary",
         use_container_width=True,
-        disabled=not text_input
+        disabled=not is_valid_input
     )
     
     return text_input, analyze_clicked

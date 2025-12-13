@@ -169,7 +169,7 @@ def main():
     selected_page = render_sidebar(retraining_service)
     
     # Page Routing
-    if selected_page in ["Dashboard", "Prediksi"]:
+    if selected_page in ["Dashboard", "Pre`diksi"]:
         # Main Prediction Page
         text_input, analyze_clicked = render_main_layout()
         

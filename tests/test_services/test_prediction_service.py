@@ -47,8 +47,8 @@ class TestPredictionValidation:
     """Test input validation"""
     
     def test_validate_input_valid(self, prediction_service):
-        """Test validation dengan valid input"""
-        text = "This is a valid test input"
+        """Test validation dengan valid input (minimal 7 kata)"""
+        text = "This is a valid test input with seven words here"
         
         is_valid, error_msg = prediction_service.validate_input(text)
         
@@ -56,8 +56,8 @@ class TestPredictionValidation:
         assert error_msg == ""
     
     def test_validate_input_too_short(self, prediction_service):
-        """Test validation dengan input terlalu pendek"""
-        text = "ab"  # Less than 3 characters
+        """Test validation dengan input terlalu pendek (kurang dari 7 kata)"""
+        text = "Only five words here now"  # 5 words, less than 7
         
         is_valid, error_msg = prediction_service.validate_input(text)
         
@@ -78,7 +78,7 @@ class TestPredictionFlow:
     
     def test_predict_success_with_consent(self, prediction_service, mock_db_manager):
         """Test successful prediction dengan user consent"""
-        text = "Test input for prediction"
+        text = "Test input for prediction with more than seven words here"
         model_version = "v1"
         user_consent = True
         
@@ -96,7 +96,7 @@ class TestPredictionFlow:
     
     def test_predict_success_without_consent(self, prediction_service, mock_db_manager):
         """Test successful prediction tanpa user consent"""
-        text = "Test input without consent"
+        text = "Test input without consent but with more than seven words"
         model_version = "v1"
         user_consent = False
         
@@ -124,7 +124,7 @@ class TestPredictionFlow:
     
     def test_predict_invalid_model_version(self, prediction_service):
         """Test prediction dengan invalid model version"""
-        text = "Valid test input"
+        text = "Valid test input with more than seven words here now"
         model_version = "invalid_version"
         user_consent = True
         
@@ -136,7 +136,7 @@ class TestPredictionFlow:
     
     def test_predict_all_model_versions(self, prediction_service):
         """Test prediction dengan semua valid model versions dari settings"""
-        text = "Test input for all versions"
+        text = "Test input for all versions with more than seven words"
         user_consent = False
         
         # Use MODEL_VERSIONS from settings instead of hardcoded list
@@ -212,7 +212,7 @@ class TestErrorHandling:
         """Test prediction dengan model loading error"""
         mock_model_loader.load_model.side_effect = Exception("Model loading failed")
         
-        result = prediction_service.predict("Test input", "v1", False)
+        result = prediction_service.predict("Test input with more than seven words here now", "v1", False)
         
         assert result['prediction'] is None
         assert result['error'] is not None
@@ -220,8 +220,8 @@ class TestErrorHandling:
     
     def test_predict_preprocessing_error(self, prediction_service):
         """Test prediction dengan preprocessing error"""
-        # Use extremely long text that might cause issues
-        text = "a" * 10000
+        # Use extremely long text that might cause issues (but still 7+ words)
+        text = "word " * 10000
         
         result = prediction_service.predict(text, "v1", False)
         
@@ -232,7 +232,7 @@ class TestErrorHandling:
         """Test prediction continues despite database error"""
         mock_db_manager.insert_user_input.side_effect = Exception("DB error")
         
-        result = prediction_service.predict("Test input", "v1", True)
+        result = prediction_service.predict("Test input with more than seven words here now", "v1", True)
         
         # Prediction should still succeed
         assert result['prediction'] is not None
@@ -246,7 +246,7 @@ class TestMetadataHandling:
     
     def test_metadata_includes_model_info(self, prediction_service):
         """Test metadata includes model information"""
-        result = prediction_service.predict("Test input", "v1", False)
+        result = prediction_service.predict("Test input with more than seven words here now", "v1", False)
         
         assert 'metadata' in result
         assert 'name' in result['metadata']
@@ -254,11 +254,11 @@ class TestMetadataHandling:
     
     def test_metadata_includes_input_token_count(self, prediction_service):
         """Test metadata includes input token count"""
-        result = prediction_service.predict("Test input", "v1", False)
+        result = prediction_service.predict("Test input with more than seven words here now", "v1", False)
         
         assert 'metadata' in result
         assert 'input_token_count' in result['metadata']
-        assert result['metadata']['input_token_count'] == 2  # "Test input" = 2 tokens
+        assert result['metadata']['input_token_count'] == 9  # 9 words
 
 
 class TestSinglePreprocessing:
@@ -281,8 +281,8 @@ class TestSinglePreprocessing:
         
         service = PredictionService(mock_db_manager, mock_model_loader)
         
-        # Input with mixed case and special chars - should NOT be preprocessed by service
-        original_text = "This is a TEST with UPPERCASE and special chars!"
+        # Input with mixed case and special chars - should NOT be preprocessed by service (7+ words)
+        original_text = "This is a TEST with UPPERCASE and special chars here!"
         
         service.predict(original_text, "v1", False)
         
@@ -307,10 +307,10 @@ class TestSinglePreprocessing:
         
         service = PredictionService(mock_db_manager, mock_model_loader)
         
-        # Text with uppercase - if double preprocessing existed, this would be lowercased
-        test_text = "UPPERCASE TEXT HERE"
+        # Text with uppercase - if double preprocessing existed, this would be lowercased (7+ words)
+        test_text = "UPPERCASE TEXT HERE WITH MORE THAN SEVEN WORDS"
         
         service.predict(test_text, "v1", False)
         
         # Verify uppercase is preserved (not preprocessed by service)
-        assert captured_text[0] == "UPPERCASE TEXT HERE"
+        assert captured_text[0] == "UPPERCASE TEXT HERE WITH MORE THAN SEVEN WORDS"

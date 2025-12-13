@@ -15,6 +15,13 @@ from services.monitoring_service import MonitoringService
 from services.retraining_service import RetrainingService
 from config.settings import settings
 
+# Test input constants (minimum 7 words)
+TEST_INPUT_VALID = "Ini adalah test input untuk prediksi dengan lebih dari tujuh kata"
+TEST_INPUT_POSITIVE = "Produk ini sangat bagus dan saya sangat puas dengan kualitasnya"
+TEST_INPUT_NEGATIVE = "Produk ini sangat mengecewakan dan tidak sesuai dengan ekspektasi saya"
+TEST_INPUT_NEUTRAL = "Pengiriman standar dan barang sampai sesuai dengan estimasi waktu pengiriman"
+TEST_INPUT_SHORT = "Test input dengan lebih dari tujuh kata untuk validasi"
+
 
 @pytest.fixture
 def temp_db():
@@ -67,7 +74,7 @@ class TestEndToEndPredictionFlow:
         db_manager = integrated_system['db_manager']
         
         # Step 1: Make prediction dengan consent
-        text = "Ini adalah test input untuk prediksi"
+        text = TEST_INPUT_VALID
         model_version = "v1"
         user_consent = True
         
@@ -97,7 +104,7 @@ class TestEndToEndPredictionFlow:
         initial_count = len(initial_predictions)
         
         # Make prediction tanpa consent
-        text = "Test input tanpa consent"
+        text = TEST_INPUT_SHORT
         result = prediction_service.predict(text, "v1", user_consent=False)
         
         # Verify prediction succeeded
@@ -113,11 +120,11 @@ class TestEndToEndPredictionFlow:
         prediction_service = integrated_system['prediction_service']
         db_manager = integrated_system['db_manager']
         
-        # Make multiple predictions
+        # Make multiple predictions (each with 7+ words)
         texts = [
-            "Prediksi pertama",
-            "Prediksi kedua",
-            "Prediksi ketiga"
+            "Prediksi pertama dengan lebih dari tujuh kata untuk test",
+            "Prediksi kedua dengan lebih dari tujuh kata untuk validasi",
+            "Prediksi ketiga dengan lebih dari tujuh kata untuk verifikasi"
         ]
         
         for text in texts:
@@ -141,7 +148,7 @@ class TestModelVersionSwitching:
         """Test prediction dengan all model versions"""
         prediction_service = integrated_system['prediction_service']
         
-        text = "Test input untuk semua versi model"
+        text = "Test input untuk semua versi model dengan lebih dari tujuh kata"
         versions = settings.MODEL_VERSIONS  # Use dynamic versions from settings
         
         results = {}
@@ -169,7 +176,7 @@ class TestModelVersionSwitching:
         
         # Make predictions dengan different versions (use available versions)
         for version in settings.MODEL_VERSIONS:
-            prediction_service.predict(f"Test {version}", version, user_consent=True)
+            prediction_service.predict(f"Test {version} dengan lebih dari tujuh kata untuk validasi", version, user_consent=True)
         
         # Verify versions saved correctly
         recent_predictions = db_manager.get_recent_predictions(limit=10)
@@ -189,7 +196,7 @@ class TestMonitoringIntegration:
         
         # Make some predictions
         for i in range(5):
-            prediction_service.predict(f"Test {i}", "v1", user_consent=True)
+            prediction_service.predict(f"Test {i} dengan lebih dari tujuh kata untuk monitoring", "v1", user_consent=True)
         
         # Get metrics
         metrics = monitoring_service.get_metrics_summary()
@@ -206,7 +213,7 @@ class TestMonitoringIntegration:
         
         # Make predictions
         for i in range(3):
-            prediction_service.predict(f"Test latency {i}", "v1", user_consent=True)
+            prediction_service.predict(f"Test latency {i} dengan lebih dari tujuh kata untuk test", "v1", user_consent=True)
         
         # Get latency distribution
         latencies = monitoring_service.get_latency_distribution(model_version="v1")
@@ -221,9 +228,9 @@ class TestMonitoringIntegration:
         monitoring_service = integrated_system['monitoring_service']
         
         # Make predictions dengan different versions
-        prediction_service.predict("Test v1", "v1", user_consent=True)
-        prediction_service.predict("Test v1 again", "v1", user_consent=True)
-        prediction_service.predict("Test v2", "v2", user_consent=True)
+        prediction_service.predict("Test v1 dengan lebih dari tujuh kata untuk validasi", "v1", user_consent=True)
+        prediction_service.predict("Test v1 again dengan lebih dari tujuh kata untuk test", "v1", user_consent=True)
+        prediction_service.predict("Test v2 dengan lebih dari tujuh kata untuk verifikasi", "v2", user_consent=True)
         
         # Get counts
         counts = monitoring_service.get_prediction_counts()
@@ -240,20 +247,20 @@ class TestRetrainingIntegration:
         prediction_service = integrated_system['prediction_service']
         retraining_service = integrated_system['retraining_service']
         
-        # Create training data
+        # Create training data (each with 7+ words)
         training_texts = [
-            "Ini sangat bagus dan menyenangkan",
-            "Produk ini mengecewakan sekali",
-            "Biasa saja tidak istimewa",
-            "Luar biasa sangat memuaskan",
-            "Buruk sekali tidak recommended",
-            "Cukup baik untuk harga segini",
-            "Sangat puas dengan pembelian ini",
-            "Kualitas jelek tidak sesuai ekspektasi",
-            "Netral saja tidak ada yang spesial",
-            "Excellent product highly recommended",
-            "Terrible experience very disappointed",
-            "Average quality nothing special"
+            "Ini sangat bagus dan menyenangkan sekali untuk digunakan sehari-hari",
+            "Produk ini mengecewakan sekali dan tidak sesuai dengan ekspektasi saya",
+            "Biasa saja tidak istimewa tapi cukup untuk kebutuhan dasar saya",
+            "Luar biasa sangat memuaskan dan saya sangat puas dengan hasilnya",
+            "Buruk sekali tidak recommended dan sangat mengecewakan sekali pengalamannya",
+            "Cukup baik untuk harga segini dan sesuai dengan ekspektasi saya",
+            "Sangat puas dengan pembelian ini dan akan membeli lagi nanti",
+            "Kualitas jelek tidak sesuai ekspektasi dan sangat mengecewakan sekali",
+            "Netral saja tidak ada yang spesial tapi cukup untuk kebutuhan",
+            "Excellent product highly recommended and very satisfied with quality",
+            "Terrible experience very disappointed and will not buy again ever",
+            "Average quality nothing special but good enough for basic needs"
         ]
         
         for text in training_texts:
@@ -290,21 +297,21 @@ class TestRetrainingIntegration:
         is_valid, message = retraining_service.validate_retraining_requirements()
         assert is_valid is False
         
-        # Add sufficient data with varying text to get different predictions
+        # Add sufficient data with varying text to get different predictions (7+ words each)
         # Note: actual prediction depends on model, but we need at least 10 samples
         texts = [
-            "Film ini sangat bagus dan menyenangkan",  # likely positif
-            "Produk ini jelek sekali tidak berguna",   # likely negatif
-            "Biasa saja tidak terlalu menarik",        # could vary
-            "Saya sangat senang dengan hasilnya",      # likely positif
-            "Sangat mengecewakan dan buruk",           # likely negatif
-            "Pelayanan bagus memuaskan",               # likely positif
-            "Tidak recommended sama sekali",           # likely negatif
-            "Amazing product highly recommended",      # might vary (english)
-            "Terrible experience never again",         # might vary (english)
-            "Lumayan lah untuk harganya",              # likely netral
-            "Produk berkualitas tinggi",               # likely positif
-            "Barangnya rusak dan jelek",               # likely negatif
+            "Film ini sangat bagus dan menyenangkan sekali untuk ditonton bersama",
+            "Produk ini jelek sekali tidak berguna dan sangat mengecewakan sekali",
+            "Biasa saja tidak terlalu menarik tapi cukup untuk kebutuhan dasar",
+            "Saya sangat senang dengan hasilnya dan akan membeli lagi nanti",
+            "Sangat mengecewakan dan buruk sekali tidak sesuai dengan ekspektasi",
+            "Pelayanan bagus memuaskan dan sangat ramah sekali kepada pelanggan",
+            "Tidak recommended sama sekali dan sangat mengecewakan pengalamannya",
+            "Amazing product highly recommended and very satisfied with quality",
+            "Terrible experience never again and very disappointed with service",
+            "Lumayan lah untuk harganya dan cukup sesuai dengan ekspektasi",
+            "Produk berkualitas tinggi dan sangat memuaskan sekali hasilnya",
+            "Barangnya rusak dan jelek sekali tidak sesuai dengan deskripsi",
         ]
         
         for text in texts:
@@ -336,7 +343,7 @@ class TestDataConsistency:
         db_manager = integrated_system['db_manager']
         
         # Make prediction
-        text = "Test consistency check"
+        text = "Test consistency check dengan lebih dari tujuh kata untuk validasi"
         model_version = "v2"
         
         result = prediction_service.predict(text, model_version, user_consent=True)
@@ -358,7 +365,7 @@ class TestDataConsistency:
         test_version = settings.MODEL_VERSIONS[0]  # Use first available version
         num_predictions = 7
         for i in range(num_predictions):
-            prediction_service.predict(f"Test {i}", test_version, user_consent=True)
+            prediction_service.predict(f"Test {i} dengan lebih dari tujuh kata untuk metrics", test_version, user_consent=True)
         
         # Get metrics
         metrics = monitoring_service.get_metrics_summary()
@@ -388,7 +395,7 @@ class TestErrorRecovery:
         
         try:
             # Prediction should still work (without saving)
-            result = prediction_service.predict("Test after db error", "v1", user_consent=True)
+            result = prediction_service.predict("Test after db error dengan lebih dari tujuh kata", "v1", user_consent=True)
             
             # Prediction should succeed
             assert result['prediction'] is not None
@@ -422,7 +429,7 @@ class TestConcurrentOperations:
         
         results = []
         for i in range(5):
-            result = prediction_service.predict(f"Concurrent test {i}", "v1", user_consent=True)
+            result = prediction_service.predict(f"Concurrent test {i} dengan lebih dari tujuh kata", "v1", user_consent=True)
             results.append(result)
         
         # All should succeed
@@ -438,7 +445,7 @@ class TestConcurrentOperations:
         results = []
         
         for i, version in enumerate(versions):
-            result = prediction_service.predict(f"Mixed test {i}", version, user_consent=True)
+            result = prediction_service.predict(f"Mixed test {i} dengan lebih dari tujuh kata", version, user_consent=True)
             results.append(result)
         
         # All should succeed

@@ -66,6 +66,7 @@ class Settings:
     APP_ICON: str = field(default_factory=lambda: os.getenv('APP_ICON', '🔎'))
     MAX_INPUT_LENGTH: int = field(default_factory=lambda: int(os.getenv('MAX_INPUT_LENGTH', '5000')))
     MIN_INPUT_LENGTH: int = field(default_factory=lambda: int(os.getenv('MIN_INPUT_LENGTH', '3')))
+    MIN_WORDS: int = field(default_factory=lambda: int(os.getenv('MIN_WORDS', '7')))
     
     # Model
     MODEL_VERSIONS: List[str] = field(default_factory=lambda: ['v1', 'v2'])
