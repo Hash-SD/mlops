@@ -8,8 +8,7 @@ Model Machine Learning tradisional bersifat statis. Setelah di-deploy, performan
 
 ## 🏗️ Arsitektur Sistem (The Big Picture)
 
-Bagaimana sistem ini menghubungkan User, Model, dan Database secara real-time?
-
+Bagian ini menjelaskan arsitektur sistem secara menyeluruh dalam mengintegrasikan pengguna, layanan prediksi berbasis model machine learning, serta database untuk mendukung proses inferensi, pencatatan log, dan pembaruan model secara real-time.
 <!--
 🔴 [INSTRUKSI UNTUK VISUALISASI - GAMBAR 1]
 Ganti gambar placeholder di bawah ini dengan diagram arsitektur buatan Anda.
@@ -27,15 +26,11 @@ Supabase (Database & Logs)
 
 **Komponen Utama:**
 
-Frontend (Streamlit): Antarmuka interaktif untuk pengguna melakukan prediksi sentimen dan memberikan feedback.
-
-Prediction Service: Layanan backend yang memuat model .pkl dan menangani logika inferensi.
-
-Feedback Loop: Mekanisme "Human-in-the-loop" yang memungkinkan pengguna mengoreksi prediksi model yang salah.
-
-Supabase Cloud: Database PostgreSQL untuk menyimpan log prediksi, feedback pengguna, dan metadata model.
-
-Automated Retraining: Layanan yang dipicu kondisi tertentu untuk melatih ulang model menggunakan data terbaru.
+- Frontend (Streamlit): Antarmuka interaktif untuk pengguna melakukan prediksi sentimen dan memberikan feedback.
+- Prediction Service: Layanan backend yang memuat model .pkl dan menangani logika inferensi.
+- Feedback Loop: Mekanisme "Human-in-the-loop" yang memungkinkan pengguna mengoreksi prediksi model yang salah.
+- Supabase Cloud: Database PostgreSQL untuk menyimpan log prediksi, feedback pengguna, dan metadata model.
+- Automated Retraining: Layanan yang dipicu kondisi tertentu untuk melatih ulang model menggunakan data terbaru.
 
 ## 🔄 Siklus Hidup MLOps (Operational Workflow)
 
@@ -55,13 +50,10 @@ graph TD
 
 **Penjelasan Alur:**
 
-Inference: Model melayani permintaan prediksi dari pengguna.
-
-Feedback Collection: Jika prediksi salah, pengguna memberikan koreksi yang langsung disimpan ke database.
-
-Monitoring: Sistem secara berkala mengecek performa model berdasarkan data feedback terbaru.
-
-Retraining: Jika akurasi turun di bawah ambang batas atau data baru sudah cukup banyak, retraining_service.py akan dijalankan untuk menghasilkan model baru yang lebih pintar.
+- Inference: Model melayani permintaan prediksi dari pengguna.
+- Feedback Collection: Jika prediksi salah, pengguna memberikan koreksi yang langsung disimpan ke database.
+- Monitoring: Sistem secara berkala mengecek performa model berdasarkan data feedback terbaru.
+- Retraining: Jika akurasi turun di bawah ambang batas atau data baru sudah cukup banyak, retraining_service.py akan dijalankan untuk menghasilkan model baru yang lebih pintar.
 
 ## 📸 Fitur & Demo Aplikasi
 
