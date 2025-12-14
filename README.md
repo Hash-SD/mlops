@@ -16,7 +16,7 @@ Gunakan tools seperti Excalidraw atau Draw.io.
 Pastikan diagram memuat:
 
 User
-
+docs/The Big Picture Architecture1.jpg
 Streamlit App (Frontend)
 
 Prediction Service (Backend)
