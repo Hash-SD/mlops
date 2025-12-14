@@ -55,9 +55,9 @@ Arsitektur ini terdiri dari tiga lapisan utama yang saling terintegrasi secara r
 
 
 
-### 📌 The Big Picture Architecture 1 
+### 📌 The Big Picture Architecture 2
 
-<img src="docs/The Big Picture Architecture2.jpg" alt="Monitoring Dashboard Screenshot 1" width="600">
+<img src="docs/The Big Picture Architecture1.jpg" alt="Monitoring Dashboard Screenshot 1" width="600">
 
 
 ### 1️⃣ Client (User / Streamlit App)
