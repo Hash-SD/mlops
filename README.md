@@ -33,8 +33,8 @@ Gambar berikut menunjukkan arsitektur sistem Sentiment Analysis berbasis MLOps y
 
 ### 📌 The Big Picture Architecture
 
-<img src="docs/The Big Picture Architecture1.jpg" alt="Monitoring Dashboard Screenshot 2" width="600">
-<img src="The Big Picture Architecture2.jpg" alt="Monitoring Dashboard Screenshot 2" width="600">
+<img src="docs/The Big Picture Architecture1.jpg" alt="Monitoring Dashboard Screenshot 1" width="600">
+<img src="docs/The Big Picture Architecture2.jpg" alt="Monitoring Dashboard Screenshot 2" width="600">
 
 ### 🔍 Analisis Arsitektur Sistem
 
