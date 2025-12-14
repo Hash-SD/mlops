@@ -107,8 +107,8 @@ def render_sidebar(retraining_service=None) -> str:
         team_members = [
             "Hermawan Manurung",
             "Najla Juwairia",
-            "Dea Mutia Risani",
             "Presilia",
+            "Dea Mutia Risani",
             "Pardi Octaviando"
         ]
         
