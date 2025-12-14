@@ -38,14 +38,59 @@ Diagram di bawah ini menjelaskan alur operasional sistem ("The Brain of MLOps"),
 
 ```mermaid
 graph TD
-    A[User Input Review] -->|Request| B(Prediction Service)
-    B -->|Hasil: Positif/Negatif| C[Tampilan UI]
-    C -->|User Klik: Salah?| D[Feedback Service]
-    D -->|Simpan Koreksi| E[(Supabase Database)]
-    E -->|Data Baru Terkumpul| F{Monitoring Service}
-    F -->|Akurasi Turun / Jadwal| G[Trigger Retraining]
-    G -->|Train Model Baru| H[Update Model .pkl]
-    H -->|Reload Model| B
+    %% Alur utama dari input pengguna sampai hasil
+    UserInput[User Input Text]
+    ValidateInput{Validasi Input}
+    ClickAnalyze[Klik Analisis]
+    LoadModel[Load Model Aktif]
+    Inference[Preprocessing dan Inference]
+    Confidence[Hitung Confidence]
+    Consent{User Consent}
+    Anonymize[Anonymize Data]
+    Database[(Supabase Database)]
+    ShowResult[Tampilkan Hasil]
+    History[Riwayat Prediksi]
+
+    %% Alur MLOps
+    Monitor[Monitoring Performa]
+    Drift[Deteksi Drift]
+    RetrainTrigger{Trigger Retraining}
+    FetchData[Ambil Data Terbaru]
+    SplitData[Split Train dan Test]
+    TrainModel[Train Model Baru]
+    Evaluate[Evaluasi Model]
+    ValidateModel[Validasi Model]
+    ArchiveModel[Archive Model Lama]
+    DeployModel[Deploy Model Baru]
+
+    %% Flow utama
+    UserInput --> ValidateInput
+    ValidateInput -- Valid --> ClickAnalyze
+    ValidateInput -- Tidak Valid --> UserInput
+    ClickAnalyze --> LoadModel
+    LoadModel --> Inference
+    Inference --> Confidence
+    Confidence --> Consent
+
+    %% Logging dan tampilan
+    Consent -- Ya --> Anonymize
+    Anonymize --> Database
+    Consent -- Tidak --> ShowResult
+    Database --> ShowResult
+    ShowResult --> History
+
+    %% Flow MLOps
+    Database --> Monitor
+    Monitor --> Drift
+    Drift --> RetrainTrigger
+    RetrainTrigger -- Ya --> FetchData
+    FetchData --> SplitData
+    SplitData --> TrainModel
+    TrainModel --> Evaluate
+    Evaluate --> ValidateModel
+    ValidateModel --> ArchiveModel
+    ArchiveModel --> DeployModel
+    DeployModel --> LoadModel
 ````
 
 **Penjelasan Alur:**
