@@ -1,4 +1,13 @@
 # 🚀 Sentiment Analysis MLOps Pipeline: Continuous Learning System
+<!-- Badges: Project tech stack & status -->
+[![Python](https://img.shields.io/badge/python-3.9%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![Streamlit](https://img.shields.io/badge/streamlit-True-orange?logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![Scikit-learn](https://img.shields.io/badge/scikit--learn-0.24%2B-lightgrey?logo=scikitlearn&logoColor=white)](https://scikit-learn.org/)
+[![Supabase](https://img.shields.io/badge/supabase-cloud-2EA44F?logo=supabase&logoColor=white)](https://supabase.com/)
+[![Docker](https://img.shields.io/badge/docker-container-blue?logo=docker&logoColor=white)](https://www.docker.com/)
+[![PyTest](https://img.shields.io/badge/pytest-tests-4B32C3?logo=pytest&logoColor=white)](https://docs.pytest.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![release](https://img.shields.io/github/v/release/Hash-SD/mlops?label=latest%20release)](https://github.com/Hash-SD/mlops/releases   )
 
 Sistem Klasifikasi Sentimen End-to-End yang "Hidup": Mampu memprediksi, menerima umpan balik pengguna, memantau performa, dan melakukan pelatihan ulang (Retraining) secara mandiri.
 
