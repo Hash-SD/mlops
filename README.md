@@ -94,9 +94,8 @@ Ikuti langkah-langkah berikut untuk menjalankan sistem ini di mesin lokal Anda.
 
 **Prasyarat**
 
-Python 3.9 atau lebih baru.
-
-Akun Supabase (Gratis) untuk database.
+- Python 3.9 atau lebih baru.
+- Akun Supabase (Gratis) untuk database.
 
 1. Clone Repository
 
