@@ -220,6 +220,110 @@ class DatabaseManager:
                 self.connection.rollback()
             raise
     
+    def update_prediction_feedback(self, prediction_id: int, feedback_correct: bool) -> bool:
+        """Update feedback for a prediction."""
+        try:
+            if not self.connection:
+                self.connect()
+            
+            from datetime import datetime
+            cursor = self.connection.cursor()
+            
+            if self.is_postgres:
+                query = "UPDATE predictions SET feedback_correct = %s, feedback_timestamp = %s WHERE id = %s"
+                cursor.execute(query, (feedback_correct, datetime.now(), prediction_id))
+            else:
+                query = "UPDATE predictions SET feedback_correct = ?, feedback_timestamp = ? WHERE id = ?"
+                cursor.execute(query, (feedback_correct, datetime.now().isoformat(), prediction_id))
+            
+            self.connection.commit()
+            cursor.close()
+            logger.info(f"Feedback updated for prediction {prediction_id}: {feedback_correct}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error updating feedback: {e}")
+            if self.connection:
+                self.connection.rollback()
+            return False
+    
+    def get_feedback_stats(self) -> Dict[str, Any]:
+        """Get feedback statistics for monitoring."""
+        try:
+            query = """
+                SELECT 
+                    COUNT(*) as total_predictions,
+                    SUM(CASE WHEN feedback_correct IS NOT NULL THEN 1 ELSE 0 END) as with_feedback,
+                    SUM(CASE WHEN feedback_correct = TRUE THEN 1 ELSE 0 END) as positive_feedback,
+                    SUM(CASE WHEN feedback_correct = FALSE THEN 1 ELSE 0 END) as negative_feedback
+                FROM predictions
+            """
+            
+            if not self.is_postgres:
+                query = query.replace('TRUE', '1').replace('FALSE', '0')
+            
+            results = self.execute_query(query)
+            
+            if results:
+                row = results[0]
+                return {
+                    'total_predictions': row.get('total_predictions', 0) or 0,
+                    'with_feedback': row.get('with_feedback', 0) or 0,
+                    'positive_feedback': row.get('positive_feedback', 0) or 0,
+                    'negative_feedback': row.get('negative_feedback', 0) or 0
+                }
+            return {}
+            
+        except Exception as e:
+            logger.error(f"Error getting feedback stats: {e}")
+            return {}
+    
+    def get_training_data(self, train_ratio: float = 0.7) -> Dict[str, Any]:
+        """Get data for training with specified train/test split ratio."""
+        try:
+            import random
+            
+            query = """
+                SELECT p.id, u.text_input, p.prediction, p.feedback_correct, p.model_version
+                FROM predictions p
+                JOIN users_inputs u ON p.input_id = u.id
+                WHERE p.feedback_correct IS NOT NULL AND u.user_consent = TRUE
+            """
+            
+            if not self.is_postgres:
+                query = query.replace('TRUE', '1')
+            
+            results = self.execute_query(query)
+            
+            valid_data = [
+                {
+                    'id': row['id'],
+                    'text': row['text_input'],
+                    'prediction': row['prediction'],
+                    'feedback_correct': row['feedback_correct'],
+                    'model_version': row['model_version']
+                }
+                for row in results
+            ]
+            
+            random.shuffle(valid_data)
+            split_idx = int(len(valid_data) * train_ratio)
+            
+            return {
+                'train': valid_data[:split_idx],
+                'test': valid_data[split_idx:],
+                'stats': {
+                    'total': len(valid_data),
+                    'train_count': split_idx,
+                    'test_count': len(valid_data) - split_idx,
+                    'train_ratio': train_ratio
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting training data: {e}")
+            return {'train': [], 'test': [], 'stats': {}}
+    
     def get_recent_predictions(self, limit: int = 10) -> List[Dict]:
         """Get recent prediction logs from database."""
         try:

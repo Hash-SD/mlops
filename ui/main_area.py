@@ -109,13 +109,14 @@ def render_example_buttons():
             st.rerun()
 
 
-def render_result_section(prediction_result: Dict[str, Any]):
-    """Render results in a clean glass card."""
+def render_result_section(prediction_result: Dict[str, Any], db_manager=None):
+    """Render results in a clean glass card with feedback option."""
     if not prediction_result:
         return
 
     pred_label = prediction_result.get('prediction', 'Unknown')
     confidence = prediction_result.get('confidence', 0.0)
+    prediction_id = prediction_result.get('prediction_id')
     
     # Color mapping
     color_map = {
@@ -150,7 +151,55 @@ def render_result_section(prediction_result: Dict[str, Any]):
         unsafe_allow_html=True
     )
     
+    # Feedback Section - Only show if user consent is given and prediction was saved
+    if prediction_id and st.session_state.get('user_consent', True):
+        render_feedback_section(prediction_id, db_manager)
+    
     # Expert Details
     if st.session_state.get('user_mode') == 'Expert':
         with st.expander("🔬 Technical Details"):
             st.json(prediction_result)
+
+
+def render_feedback_section(prediction_id: int, db_manager=None):
+    """Render feedback buttons for user to rate prediction accuracy."""
+    feedback_key = f"feedback_{prediction_id}"
+    
+    # Check if feedback already given
+    if st.session_state.get(feedback_key):
+        st.markdown(
+            """
+            <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; padding: 12px; margin-top: 10px; text-align: center;">
+                <span style="color: #166534;">✓ Terima kasih atas feedback Anda!</span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        return
+    
+    st.markdown(
+        """
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #E2E8F0;">
+            <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 10px;">
+                📝 Apakah hasil prediksi ini akurat? <span style="color: #94A3B8; font-size: 0.8rem;">(opsional)</span>
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    
+    col1, col2, col3 = st.columns([1, 1, 2])
+    
+    with col1:
+        if st.button("✅ Benar", key=f"fb_correct_{prediction_id}", use_container_width=True):
+            if db_manager and hasattr(db_manager, 'update_prediction_feedback'):
+                db_manager.update_prediction_feedback(prediction_id, True)
+            st.session_state[feedback_key] = 'correct'
+            st.rerun()
+    
+    with col2:
+        if st.button("❌ Salah", key=f"fb_wrong_{prediction_id}", use_container_width=True):
+            if db_manager and hasattr(db_manager, 'update_prediction_feedback'):
+                db_manager.update_prediction_feedback(prediction_id, False)
+            st.session_state[feedback_key] = 'wrong'
+            st.rerun()

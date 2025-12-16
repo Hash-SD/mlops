@@ -64,9 +64,10 @@ class PredictionService:
             metadata['input_token_count'] = len(text.split())
             
             # Step 6: Log to database
+            prediction_id = None
             if user_consent:
-                success = self.log_prediction(text, prediction, confidence, latency, model_version, user_consent)
-                if not success:
+                prediction_id = self.log_prediction(text, prediction, confidence, latency, model_version, user_consent)
+                if not prediction_id:
                     metadata['database_warning'] = "Gagal menyimpan ke database"
             else:
                 self.logger.info("User opted out, skipping database logging")
@@ -77,7 +78,8 @@ class PredictionService:
                 'confidence': confidence,
                 'latency': latency,
                 'metadata': metadata,
-                'error': None
+                'error': None,
+                'prediction_id': prediction_id
             }
             
             self.logger.info(f"Prediction completed: {prediction} (confidence: {confidence:.2f}, latency: {latency:.3f}s)")
@@ -96,7 +98,8 @@ class PredictionService:
             'confidence': 0.0,
             'latency': latency,
             'metadata': {},
-            'error': error_message
+            'error': error_message,
+            'prediction_id': None
         }
     
     def log_prediction(
@@ -107,12 +110,12 @@ class PredictionService:
         latency: float,
         model_version: str,
         consent: bool
-    ) -> bool:
+    ) -> int:
         """
         Log prediction to database.
         
         Returns:
-            bool: True if successful, False otherwise
+            int: prediction_id if successful, None otherwise
         """
         try:
             # Check for PII and anonymize if needed
@@ -126,7 +129,7 @@ class PredictionService:
             input_id = self.db_manager.insert_user_input(text=text_to_save, consent=consent)
             
             # Insert prediction
-            self.db_manager.insert_prediction(
+            prediction_id = self.db_manager.insert_prediction(
                 input_id=input_id,
                 model_version=model_version,
                 prediction=prediction,
@@ -134,9 +137,9 @@ class PredictionService:
                 latency=latency
             )
             
-            self.logger.info(f"Prediction logged: input_id={input_id}, anonymized={has_pii}")
-            return True
+            self.logger.info(f"Prediction logged: input_id={input_id}, prediction_id={prediction_id}, anonymized={has_pii}")
+            return prediction_id
             
         except Exception as e:
             self.logger.error(f"Failed to log prediction: {e}", exc_info=True)
-            return False
+            return None

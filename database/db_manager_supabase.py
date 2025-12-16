@@ -246,7 +246,11 @@ class SupabaseDatabaseManager:
             'model_version': model_version,
             'prediction': prediction,
             'confidence': confidence,
-            'latency': latency
+            'latency': latency,
+            'feedback_correct': None,
+            'feedback_timestamp': None,
+            'used_for_training': False,
+            'training_split': None
         }
         
         r = self._retry_request('post', f"{self.supabase_url}/rest/v1/predictions", json=data, timeout=10)
@@ -257,6 +261,119 @@ class SupabaseDatabaseManager:
             return prediction_id
         
         raise Exception(f"Insert failed: {r.status_code} - {r.text}")
+    
+    def update_prediction_feedback(self, prediction_id: int, feedback_correct: bool) -> bool:
+        """Update feedback for a prediction."""
+        try:
+            from datetime import datetime
+            data = {
+                'feedback_correct': feedback_correct,
+                'feedback_timestamp': datetime.now().isoformat()
+            }
+            
+            url = f"{self.supabase_url}/rest/v1/predictions?id=eq.{prediction_id}"
+            headers = {**self._headers, 'Prefer': 'return=minimal'}
+            
+            r = self.http.patch(url, headers=headers, json=data, timeout=10)
+            
+            if r.status_code in [200, 204]:
+                logger.info(f"Feedback updated for prediction {prediction_id}: {feedback_correct}")
+                return True
+            
+            logger.error(f"Failed to update feedback: {r.status_code} - {r.text}")
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error updating feedback: {e}")
+            return False
+    
+    def get_feedback_stats(self) -> Dict[str, Any]:
+        """Get feedback statistics for monitoring."""
+        try:
+            url = f"{self.supabase_url}/rest/v1/predictions?select=feedback_correct,model_version"
+            r = self.http.get(url, headers=self._headers, timeout=10)
+            
+            if r.status_code != 200:
+                return {}
+            
+            results = r.json()
+            stats = {
+                'total_predictions': len(results),
+                'with_feedback': sum(1 for r in results if r.get('feedback_correct') is not None),
+                'positive_feedback': sum(1 for r in results if r.get('feedback_correct') is True),
+                'negative_feedback': sum(1 for r in results if r.get('feedback_correct') is False),
+                'by_model': {}
+            }
+            
+            # Group by model
+            for row in results:
+                model = row.get('model_version', 'unknown')
+                if model not in stats['by_model']:
+                    stats['by_model'][model] = {'total': 0, 'positive': 0, 'negative': 0}
+                stats['by_model'][model]['total'] += 1
+                if row.get('feedback_correct') is True:
+                    stats['by_model'][model]['positive'] += 1
+                elif row.get('feedback_correct') is False:
+                    stats['by_model'][model]['negative'] += 1
+            
+            return stats
+            
+        except Exception as e:
+            logger.error(f"Error getting feedback stats: {e}")
+            return {}
+    
+    def get_training_data(self, train_ratio: float = 0.7) -> Dict[str, Any]:
+        """Get data for training with specified train/test split ratio."""
+        try:
+            import random
+            
+            # Get predictions with feedback and consent
+            url = f"{self.supabase_url}/rest/v1/predictions"
+            url += "?select=id,prediction,confidence,model_version,feedback_correct,users_inputs(text_input,user_consent)"
+            url += "&feedback_correct=not.is.null"
+            
+            r = self.http.get(url, headers=self._headers, timeout=30)
+            
+            if r.status_code != 200:
+                logger.error(f"Failed to get training data: {r.status_code}")
+                return {'train': [], 'test': [], 'stats': {}}
+            
+            results = r.json()
+            
+            # Filter only consented data
+            valid_data = [
+                {
+                    'id': row['id'],
+                    'text': row.get('users_inputs', {}).get('text_input', ''),
+                    'prediction': row['prediction'],
+                    'feedback_correct': row['feedback_correct'],
+                    'model_version': row['model_version']
+                }
+                for row in results
+                if row.get('users_inputs', {}).get('user_consent', False)
+            ]
+            
+            # Shuffle and split
+            random.shuffle(valid_data)
+            split_idx = int(len(valid_data) * train_ratio)
+            
+            train_data = valid_data[:split_idx]
+            test_data = valid_data[split_idx:]
+            
+            return {
+                'train': train_data,
+                'test': test_data,
+                'stats': {
+                    'total': len(valid_data),
+                    'train_count': len(train_data),
+                    'test_count': len(test_data),
+                    'train_ratio': train_ratio
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting training data: {e}")
+            return {'train': [], 'test': [], 'stats': {}}
     
     def get_recent_predictions(self, limit: int = 10) -> List[Dict]:
         """Get recent prediction logs with join to users_inputs."""

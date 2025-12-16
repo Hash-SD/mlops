@@ -88,6 +88,10 @@ class Settings:
     ENABLE_PII_DETECTION: bool = field(default_factory=lambda: os.getenv('ENABLE_PII_DETECTION', 'true').lower() == 'true')
     ADMIN_PASSWORD: str = field(default_factory=lambda: get_config_value('ADMIN_PASSWORD', 'admin123secure'))
     
+    # GitHub CI/CD
+    GITHUB_TOKEN: str = field(default_factory=lambda: get_config_value('GITHUB_TOKEN', ''))
+    GITHUB_REPO: str = field(default_factory=lambda: get_config_value('GITHUB_REPO', ''))
+    
     def __post_init__(self):
         self._validate()
     

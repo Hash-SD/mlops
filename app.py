@@ -194,7 +194,7 @@ def main():
         
         # Render Result
         if st.session_state.current_prediction:
-            render_result_section(st.session_state.current_prediction)
+            render_result_section(st.session_state.current_prediction, db_manager)
         
         # Examples
         st.markdown("---")
@@ -216,7 +216,7 @@ def main():
         render_monitoring_dashboard(monitoring_service)
     
     elif selected_page in ["Management", "Model Management"]:
-        render_model_management_page()
+        render_model_management_page(db_manager)
     
     # Footer
     render_footer()

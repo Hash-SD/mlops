@@ -1,4 +1,4 @@
-"""Model Management Page for Admin."""
+﻿"""Model Management Page for Admin - Standard Streamlit UI."""
 
 import streamlit as st
 import logging
@@ -11,26 +11,20 @@ from config.settings import settings
 from models.model_archiver import ModelArchiver
 from models.model_updater import ModelUpdater
 from ui.monitoring import _get_training_config
+from ui.cicd_management import render_cicd_tab
 
 logger = logging.getLogger(__name__)
 
-
-# =============================================================================
-# ADMIN AUTHENTICATION (with rate limiting)
-# =============================================================================
-
-# Security: Rate limiting constants
+# Security constants
 MAX_LOGIN_ATTEMPTS = 5
-LOCKOUT_DURATION_SECONDS = 300  # 5 minutes
+LOCKOUT_DURATION_SECONDS = 300
 
 
 def _get_login_attempts() -> int:
-    """Get current failed login attempts count."""
     return st.session_state.get('login_attempts', 0)
 
 
 def _increment_login_attempts():
-    """Increment failed login attempts and set lockout time if exceeded."""
     attempts = _get_login_attempts() + 1
     st.session_state['login_attempts'] = attempts
     if attempts >= MAX_LOGIN_ATTEMPTS:
@@ -38,34 +32,22 @@ def _increment_login_attempts():
 
 
 def _reset_login_attempts():
-    """Reset login attempts after successful login."""
     st.session_state['login_attempts'] = 0
     st.session_state.pop('lockout_time', None)
 
 
 def _is_locked_out() -> Tuple[bool, int]:
-    """
-    Check if user is locked out due to too many failed attempts.
-    
-    Security: Prevents brute force attacks on admin login.
-    Returns: (is_locked, remaining_seconds)
-    """
     lockout_time = st.session_state.get('lockout_time', 0)
     if lockout_time == 0:
         return False, 0
-    
     elapsed = time.time() - lockout_time
     if elapsed < LOCKOUT_DURATION_SECONDS:
-        remaining = int(LOCKOUT_DURATION_SECONDS - elapsed)
-        return True, remaining
-    
-    # Lockout expired, reset
+        return True, int(LOCKOUT_DURATION_SECONDS - elapsed)
     _reset_login_attempts()
     return False, 0
 
 
 def _verify_admin_password(input_password: str) -> bool:
-    """Verify admin password with constant-time comparison to prevent timing attacks."""
     import hmac
     return hmac.compare_digest(input_password, settings.ADMIN_PASSWORD)
 
@@ -75,13 +57,6 @@ def _check_admin_session() -> bool:
 
 
 def _login_admin(password: str) -> Tuple[bool, str]:
-    """
-    Attempt admin login with rate limiting.
-    
-    Security: Implements rate limiting to prevent brute force attacks.
-    Returns: (success, message)
-    """
-    # Check lockout first
     is_locked, remaining = _is_locked_out()
     if is_locked:
         return False, f"🔒 Terlalu banyak percobaan. Coba lagi dalam {remaining} detik."
@@ -112,7 +87,7 @@ def _check_session_timeout(timeout_minutes: int = 30) -> bool:
 
 
 def render_admin_login_section() -> bool:
-    """Render admin login section."""
+    """Render admin login section with standard Streamlit components."""
     if _check_admin_session() and _check_session_timeout(timeout_minutes=30):
         _logout_admin()
         st.warning("⏰ Session timeout. Silakan login kembali.")
@@ -125,13 +100,12 @@ def render_admin_login_section() -> bool:
     else:
         st.warning("🔒 **Login Required** - Masukkan password admin untuk mengakses fitur manajemen")
         
-        # Security: Check if locked out before showing login form
         is_locked, remaining = _is_locked_out()
         if is_locked:
             st.error(f"🔒 Terlalu banyak percobaan gagal. Coba lagi dalam {remaining} detik.")
         else:
-            c1, c2 = st.columns([3, 1])
-            with c1:
+            col1, col2 = st.columns([3, 1])
+            with col1:
                 password = st.text_input(
                     "Password Admin",
                     type="password",
@@ -139,7 +113,7 @@ def render_admin_login_section() -> bool:
                     key="mgmt_admin_pass",
                     label_visibility="collapsed"
                 )
-            with c2:
+            with col2:
                 if st.button("🔓 Login", use_container_width=True):
                     if password:
                         success, message = _login_admin(password)
@@ -155,34 +129,103 @@ def render_admin_login_section() -> bool:
     return _check_admin_session()
 
 
-# =============================================================================
-# TAB COMPONENTS
-# =============================================================================
-
 def render_tutorial_section():
     """Render tutorial section for admin."""
-    with st.expander("📚 **TUTORIAL: Cara Upload & Simpan Model** (Klik untuk membuka)", expanded=False):
+    with st.expander("📚 **TUTORIAL: Panduan Lengkap Model Management** (Klik untuk membuka)", expanded=False):
         st.markdown("""
-        ### 📖 Panduan Manajemen Model
+        ### 📖 Panduan Manajemen Model InsighText
         
-        **1. Persiapan File**
-        - Pastikan file `model_pipeline.pkl` siap.
+        ---
         
-        **2. Login Admin**
-        - Gunakan tombol login di atas untuk akses penuh.
+        #### 1️⃣ Persiapan Sebelum Upload
         
-        **3. Upload Model**
-        - Gunakan tab **Update** untuk mengunggah model baru.
-        - Isi metrik akurasi agar tercatat di history.
+        **File yang Diperlukan:**
+        - `model.pkl` - File model machine learning (Naive Bayes/TF-IDF)
+        - `preprocessor.pkl` - File preprocessor (opsional)
         
-        **4. Promosi & Archive**
-        - Deploy model dari Staging ke Production di tab **Promosi**.
-        - Lihat backup di tab **Archive**.
+        **Metrik yang Harus Disiapkan:**
+        - Akurasi model (0.0 - 1.0)
+        - F1 Score (0.0 - 1.0)
+        - Jumlah training samples
+        
+        ---
+        
+        #### 2️⃣ Proses Upload Model
+        
+        1. **Login sebagai Admin** - Masukkan password admin
+        2. **Buka Tab "📤 Update"**
+        3. **Upload file model** (.pkl)
+        4. **Isi metrik** akurasi, F1 score, dan training samples
+        5. **Atur rasio data** training/testing (default 70:30)
+        6. **Centang "Auto Push ke GitHub"** jika ingin otomatis push
+        7. **Klik "🚀 Update Model Sekarang"**
+        
+        ---
+        
+        #### 3️⃣ Alur Data Training (Feedback Loop)
+        
+        ```
+        User Input → Prediksi → Feedback (✅/❌) → Database
+                                                    ↓
+        Model Baru ← Retraining ← Data Training ←──┘
+        ```
+        
+        **Cara Kerja:**
+        - User memberikan feedback pada hasil prediksi
+        - Data dengan feedback disimpan di database
+        - Admin dapat mengatur rasio split (Training:Testing)
+        - Data digunakan untuk retraining model
+        
+        ---
+        
+        #### 4️⃣ CI/CD Integration (GitHub)
+        
+        **Konfigurasi (sudah di Streamlit Secrets):**
+        - `GITHUB_TOKEN` - Personal Access Token
+        - `GITHUB_REPO` - Format: `owner/repo-name`
+        
+        **Fitur CI/CD:**
+        - ✅ Auto push model ke GitHub setelah upload
+        - ✅ Create release dengan version tag
+        - ✅ Trigger GitHub Actions workflow
+        - ✅ Monitoring CI/CD runs
+        
+        ---
+        
+        #### 5️⃣ Promosi & Archive
+        
+        **Archive Model:**
+        - Backup model sebelum update
+        - Simpan dengan catatan/notes
+        
+        **Restore Model:**
+        - Kembalikan model dari archive
+        - Rollback jika model baru bermasalah
+        
+        ---
+        
+        #### 6️⃣ Monitoring Feedback
+        
+        **Statistik yang Tersedia:**
+        - Total prediksi
+        - Jumlah feedback (positif/negatif)
+        - Akurasi berdasarkan feedback user
+        - Data siap untuk retraining
+        
+        ---
+        
+        #### ⚠️ Tips Penting
+        
+        1. **Selalu backup** model sebelum update
+        2. **Isi metrik dengan benar** untuk tracking performa
+        3. **Gunakan semantic versioning** (v1.0.0, v1.1.0, v2.0.0)
+        4. **Monitor feedback** untuk evaluasi model
+        5. **Atur rasio data** sesuai kebutuhan (70:30 recommended)
         """)
 
 
 def render_upload_model_tab(is_admin: bool, updater: ModelUpdater, archiver: ModelArchiver):
-    """Render tab for uploading new model."""
+    """Render tab for uploading new model with GitHub integration."""
     st.markdown("#### 📤 Upload Model Baru")
     
     if not is_admin:
@@ -191,24 +234,33 @@ def render_upload_model_tab(is_admin: bool, updater: ModelUpdater, archiver: Mod
     
     st.caption("Upload model baru (.pkl) untuk menggantikan versi Production saat ini.")
     
-    col1, col2 = st.columns([2, 1])
+    # File Upload Section
+    st.markdown("**📁 Upload Files**")
     
-    with col1:
-        st.markdown("**File Model (.pkl):**")
-        uploaded_model = st.file_uploader("Upload file model", type=['pkl'], key="upload_model_file", label_visibility="collapsed")
-        if uploaded_model:
-            st.success(f"✓ {uploaded_model.name}")
+    uploaded_model = st.file_uploader(
+        "File Model (.pkl)",
+        type=['pkl'],
+        key="upload_model_file",
+        help="Upload file model machine learning"
+    )
+    if uploaded_model:
+        st.success(f"✓ {uploaded_model.name}")
     
-    with col2:
-        st.markdown("**File Preprocessor:**")
-        uploaded_preprocessor = st.file_uploader("Upload file preprocessor", type=['pkl'], key="upload_preprocessor_file", label_visibility="collapsed")
-        if uploaded_preprocessor:
-            st.success(f"✓ {uploaded_preprocessor.name}")
+    uploaded_preprocessor = st.file_uploader(
+        "File Preprocessor (opsional)",
+        type=['pkl'],
+        key="upload_preprocessor_file",
+        help="Upload file preprocessor jika ada"
+    )
+    if uploaded_preprocessor:
+        st.success(f"✓ {uploaded_preprocessor.name}")
     
     st.markdown("---")
-    st.markdown("**📈 Metrics Model Baru:**")
-    col1, col2, col3 = st.columns(3)
     
+    # Metrics Section
+    st.markdown("**📈 Metrics Model Baru**")
+    
+    col1, col2, col3 = st.columns(3)
     with col1:
         new_accuracy = st.number_input("Akurasi Model", 0.0, 1.0, 0.75, 0.01, key="new_accuracy")
     with col2:
@@ -216,49 +268,189 @@ def render_upload_model_tab(is_admin: bool, updater: ModelUpdater, archiver: Mod
     with col3:
         new_training_samples = st.number_input("Training Samples", 100, None, 1000, 100, key="new_samples")
     
-    update_reason = st.text_area("📝 Alasan Update Model:", placeholder="Contoh: Optimasi data...", key="update_reason")
+    st.markdown("---")
+    
+    # Data Flow Configuration
+    st.markdown("**📊 Konfigurasi Aliran Data:**")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        train_ratio = st.slider(
+            "Rasio Data Training",
+            min_value=50,
+            max_value=90,
+            value=70,
+            step=5,
+            key="upload_train_ratio",
+            help="Persentase data feedback yang digunakan untuk training"
+        )
+    
+    with col2:
+        st.metric("Training : Testing", f"{train_ratio}% : {100-train_ratio}%")
     
     st.markdown("---")
     
+    # GitHub Integration Options
+    st.markdown("**🔄 GitHub CI/CD Options:**")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        auto_push_github = st.checkbox(
+            "Auto Push ke GitHub",
+            value=True,
+            key="auto_push_github",
+            help="Otomatis push model ke GitHub setelah upload berhasil"
+        )
+    
+    with col2:
+        trigger_cicd = st.checkbox(
+            "Trigger CI/CD Pipeline",
+            value=True,
+            key="trigger_cicd_checkbox",
+            help="Otomatis trigger GitHub Actions workflow"
+        )
+    
+    if auto_push_github:
+        col1, col2 = st.columns(2)
+        with col1:
+            release_tag = st.text_input(
+                "Version Tag",
+                value=f"v{datetime.now().strftime('%Y%m%d.%H%M')}",
+                key="upload_release_tag",
+                help="Tag untuk release (e.g., v1.0.0)"
+            )
+        with col2:
+            release_name = st.text_input(
+                "Release Name",
+                value=f"Model Update - {datetime.now().strftime('%d %B %Y')}",
+                key="upload_release_name"
+            )
+    
+    st.markdown("---")
+    
+    # Update Reason
+    update_reason = st.text_area(
+        "📝 Alasan Update Model:",
+        placeholder="Contoh: Penambahan data training baru, optimasi hyperparameter...",
+        key="update_reason"
+    )
+    
+    st.markdown("---")
+    
+    # Upload Button
     if st.button("🚀 Update Model Sekarang", use_container_width=True, type="primary", key="btn_update"):
         if uploaded_model is not None:
-            with st.spinner("⏳ Memproses update model..."):
-                try:
-                    temp_model_dir = Path('temp_model_upload')
-                    temp_model_dir.mkdir(exist_ok=True)
-                    
-                    model_path = temp_model_dir / uploaded_model.name
-                    with open(model_path, 'wb') as f:
-                        f.write(uploaded_model.getvalue())
-                    
-                    if uploaded_preprocessor:
-                        preprocessor_path = temp_model_dir / uploaded_preprocessor.name
-                        with open(preprocessor_path, 'wb') as f:
-                            f.write(uploaded_preprocessor.getvalue())
-                    
-                    new_metrics = {
-                        'accuracy': new_accuracy,
-                        'f1_score': new_f1_score,
-                        'training_samples': new_training_samples,
-                        'uploaded_at': datetime.now().isoformat()
-                    }
-                    
-                    success, report = updater.update_model_v1(
-                        new_model_path=str(temp_model_dir),
-                        new_metrics=new_metrics,
-                        update_reason=update_reason or "Update via UI",
-                        auto_validate=True
-                    )
-                    
-                    if success:
-                        st.success("✅ Model berhasil di-update!")
-                        st.json(report.get('summary', {}))
-                    else:
-                        st.error(f"❌ Update gagal: {report.get('error', 'Unknown')}")
-                        st.json(report)
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            try:
+                # Step 1: Save model locally
+                status_text.text("📁 Menyimpan model...")
+                progress_bar.progress(20)
                 
-                except Exception as e:
-                    st.error(f"❌ Error: {str(e)}")
+                temp_model_dir = Path('temp_model_upload')
+                temp_model_dir.mkdir(exist_ok=True)
+                
+                model_path = temp_model_dir / uploaded_model.name
+                with open(model_path, 'wb') as f:
+                    f.write(uploaded_model.getvalue())
+                
+                if uploaded_preprocessor:
+                    preprocessor_path = temp_model_dir / uploaded_preprocessor.name
+                    with open(preprocessor_path, 'wb') as f:
+                        f.write(uploaded_preprocessor.getvalue())
+                
+                # Step 2: Update model
+                status_text.text("🔄 Memproses update model...")
+                progress_bar.progress(40)
+                
+                new_metrics = {
+                    'accuracy': new_accuracy,
+                    'f1_score': new_f1_score,
+                    'training_samples': new_training_samples,
+                    'train_ratio': train_ratio,
+                    'uploaded_at': datetime.now().isoformat()
+                }
+                
+                success, report = updater.update_model_v1(
+                    new_model_path=str(temp_model_dir),
+                    new_metrics=new_metrics,
+                    update_reason=update_reason or "Update via UI",
+                    auto_validate=True
+                )
+                
+                if not success:
+                    st.error(f"❌ Update gagal: {report.get('error', 'Unknown')}")
+                    st.json(report)
+                    return
+                
+                progress_bar.progress(60)
+                st.success("✅ Model berhasil di-update secara lokal!")
+                
+                # Step 3: Push to GitHub (if enabled)
+                if auto_push_github:
+                    status_text.text("📤 Push ke GitHub...")
+                    progress_bar.progress(80)
+                    
+                    from ui.cicd_management import GitHubIntegration
+                    from config.settings import get_config_value
+                    
+                    token = get_config_value('GITHUB_TOKEN', '')
+                    repo = get_config_value('GITHUB_REPO', '')
+                    
+                    gh = GitHubIntegration(token, repo)
+                    
+                    if gh.is_configured():
+                        release_notes = f"""## Model Update
+                        
+**Metrics:**
+- Accuracy: {new_accuracy:.2%}
+- F1 Score: {new_f1_score:.2%}
+- Training Samples: {new_training_samples}
+- Train/Test Ratio: {train_ratio}:{100-train_ratio}
+
+**Reason:** {update_reason or 'Update via UI'}
+
+**Uploaded at:** {datetime.now().isoformat()}
+"""
+                        gh_success, gh_message = gh.create_release(
+                            release_tag,
+                            release_name,
+                            release_notes
+                        )
+                        
+                        if gh_success:
+                            st.success(f"✅ GitHub: {gh_message}")
+                        else:
+                            st.warning(f"⚠️ GitHub: {gh_message}")
+                        
+                        # Step 4: Trigger CI/CD (if enabled)
+                        if trigger_cicd:
+                            status_text.text("⚡ Trigger CI/CD Pipeline...")
+                            cicd_success, cicd_message = gh.trigger_workflow(
+                                'model-deploy.yml',
+                                inputs={'train_ratio': str(train_ratio)}
+                            )
+                            if cicd_success:
+                                st.success(f"✅ CI/CD: {cicd_message}")
+                            else:
+                                st.warning(f"⚠️ CI/CD: {cicd_message}")
+                    else:
+                        st.warning("⚠️ GitHub tidak dikonfigurasi. Model hanya disimpan lokal.")
+                
+                progress_bar.progress(100)
+                status_text.text("✅ Selesai!")
+                
+                # Show summary
+                st.markdown("---")
+                st.markdown("**📋 Summary:**")
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Accuracy", f"{new_accuracy:.1%}")
+                col2.metric("F1 Score", f"{new_f1_score:.1%}")
+                col3.metric("Data Split", f"{train_ratio}:{100-train_ratio}")
+                
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
         else:
             st.warning("⚠️ Silakan upload file model (.pkl) terlebih dahulu")
 
@@ -397,11 +589,39 @@ def render_history_tab(updater: ModelUpdater):
         st.info("Belum ada history.")
 
 
-# =============================================================================
-# MAIN PAGE
-# =============================================================================
+def render_feedback_stats_tab(db_manager=None):
+    """Render feedback statistics tab."""
+    st.markdown("#### 📊 Feedback Statistics")
+    st.caption("Statistik feedback dari pengguna untuk evaluasi model")
+    
+    if not db_manager or not hasattr(db_manager, 'get_feedback_stats'):
+        st.info("📭 Fitur feedback statistics tidak tersedia")
+        return
+    
+    stats = db_manager.get_feedback_stats()
+    
+    if not stats or stats.get('total_predictions', 0) == 0:
+        st.info("📭 Belum ada data feedback")
+        return
+    
+    # Stats metrics
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Total Prediksi", stats.get('total_predictions', 0))
+    col2.metric("Dengan Feedback", stats.get('with_feedback', 0))
+    col3.metric("✅ Benar", stats.get('positive_feedback', 0))
+    col4.metric("❌ Salah", stats.get('negative_feedback', 0))
+    
+    # Accuracy from feedback
+    if stats.get('with_feedback', 0) > 0:
+        feedback_accuracy = stats.get('positive_feedback', 0) / stats.get('with_feedback', 1)
+        st.markdown("---")
+        st.metric("📈 Akurasi Berdasarkan Feedback", f"{feedback_accuracy:.1%}")
+        
+        # Progress bar
+        st.progress(feedback_accuracy)
 
-def render_model_management_page():
+
+def render_model_management_page(db_manager=None):
     """Main function to render Model Management page."""
     st.markdown(
         """
@@ -414,14 +634,21 @@ def render_model_management_page():
     )
     
     is_admin = render_admin_login_section()
+    
+    # Tutorial section - moved to top (below login)
+    render_tutorial_section()
+    
     st.markdown("---")
     
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📤 Update",
-        "🚀 Promosi",
-        "📦 Archive",
-        "⚖️ Komparasi",
-        "📋 History"
+    # Tabs
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        "Upload",
+        "Promosi",
+        "Archive",
+        "Komparasi",
+        "History",
+        "CI/CD",
+        "Feedback"
     ])
     
     updater = ModelUpdater()
@@ -438,6 +665,7 @@ def render_model_management_page():
         render_comparison_tab(archiver)
     with tab5:
         render_history_tab(updater)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    render_tutorial_section()
+    with tab6:
+        render_cicd_tab(is_admin, db_manager)
+    with tab7:
+        render_feedback_stats_tab(db_manager)

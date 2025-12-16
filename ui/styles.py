@@ -296,6 +296,108 @@ def load_css():
             font-weight: 400 !important;
         }
 
+        /* Feedback Section Styles */
+        .feedback-btn {
+            padding: 8px 16px !important;
+            border-radius: 8px !important;
+            font-weight: 500 !important;
+            transition: all 0.2s ease !important;
+        }
+        
+        .feedback-btn:hover {
+            transform: scale(1.02) !important;
+        }
+        
+        /* Admin Panel Styles */
+        .admin-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid #E2E8F0;
+            margin-bottom: 15px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, var(--primary) 0%, #1D4ED8 100%);
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+            text-align: center;
+        }
+        
+        .stat-card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        
+        .stat-card-label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+        
+        /* Tab Styles */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 8px;
+        }
+        
+        .stTabs [data-baseweb="tab"] {
+            border-radius: 8px !important;
+            padding: 10px 20px !important;
+            font-weight: 500 !important;
+        }
+        
+        .stTabs [aria-selected="true"] {
+            background-color: var(--primary) !important;
+            color: white !important;
+        }
+        
+        /* Slider Styles */
+        .stSlider > div > div > div {
+            background: linear-gradient(90deg, #2563EB, #3B82F6) !important;
+        }
+        
+        /* Expander Styles */
+        .streamlit-expanderHeader {
+            font-weight: 600 !important;
+            color: #1E293B !important;
+        }
+        
+        /* Progress Bar Animation */
+        @keyframes progressPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .progress-animated {
+            animation: progressPulse 2s ease-in-out infinite;
+        }
+
+        /* White background for file uploader drag-drop area */
+        [data-testid="stFileUploader"] > section {
+            background-color: white !important;
+            padding: 15px !important;
+            border-radius: 10px !important;
+            border: 1px solid #E2E8F0 !important;
+        }
+        
+        [data-testid="stFileUploader"] > section > div {
+            background-color: white !important;
+        }
+        
+        /* White background for number input */
+        [data-testid="stNumberInput"] > div {
+            background-color: white !important;
+            padding: 8px !important;
+            border-radius: 8px !important;
+            border: 1px solid #E2E8F0 !important;
+        }
+        
+        [data-testid="stNumberInput"] input {
+            background-color: white !important;
+        }
+
         @media only screen and (max-width: 768px) {
             .stApp h1 { font-size: 1.5rem !important; margin-bottom: 3px !important; }
             .stApp p { font-size: 0.85rem !important; }
