@@ -261,8 +261,17 @@ pytest
 **Menjalankan test spesifik**
 
 ```bash
-pytest tests/test_services/
+pytest tests/test_validators.py -v
+pytest tests/test_prediction_service.py -v
 ```
+
+### 🐛 Recent Bug Fixes
+
+**[December 2025] Input Validation Bug Fix**
+- **Issue:** Overly aggressive security pattern `[;&|`$]` was blocking legitimate user input containing common punctuation (semicolons, ampersands, dollar signs)
+- **Impact:** Users couldn't submit reviews like "Great product; costs $25 & ships fast!"
+- **Fix:** Modified dangerous patterns to be context-aware, only blocking actual command injection attempts while allowing normal punctuation
+- **Tests:** Added 27 new test cases in `tests/test_validators.py` to verify the fix and prevent regression
 
 <p align="center">
 Dibuat dengan ❤️ untuk Tugas Besar MLOps

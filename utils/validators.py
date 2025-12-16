@@ -11,7 +11,11 @@ DANGEROUS_PATTERNS = [
     r'javascript:',                 # JavaScript protocol
     r'on\w+\s*=',                   # Event handlers (onclick, onerror, etc.)
     r'(\b(SELECT|INSERT|UPDATE|DELETE|DROP|UNION|ALTER)\b.*\b(FROM|INTO|TABLE|WHERE)\b)',  # SQL injection
-    r'[;&|`$]',                     # Command injection characters
+    r'[`]',                         # Backtick (command substitution)
+    r';\s*\w+\s*-',                 # Command injection pattern (e.g., "; rm -")
+    r'\|\s*\w+',                    # Pipe to command (e.g., "| cat")
+    r'\$\([^)]+\)',                 # Command substitution $(...)
+    r'\$\{[^}]+\}',                 # Variable expansion ${...}
     r'\.\./|\.\.\\',               # Path traversal
 ]
 
