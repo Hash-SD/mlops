@@ -20,6 +20,7 @@ class SupabaseDatabaseManager:
         self.max_retries = 3
         self.retry_delay = 1
         self.is_postgres = True
+        self.connection = True  # REST API is stateless, always "connected"
         
         try:
             import httpx
@@ -228,39 +229,53 @@ class SupabaseDatabaseManager:
     
     def insert_user_input(self, text: str, consent: bool) -> int:
         """Insert user input to database."""
-        data = {'text_input': text, 'user_consent': consent, 'anonymized': False}
-        
-        r = self._retry_request('post', f"{self.supabase_url}/rest/v1/users_inputs", json=data, timeout=10)
-        
-        if r.status_code == 201:
-            input_id = r.json()[0]['id']
-            logger.info(f"User input inserted: ID={input_id}, consent={consent}")
-            return input_id
-        
-        raise Exception(f"Insert failed: {r.status_code} - {r.text}")
+        try:
+            data = {'text_input': text, 'user_consent': consent, 'anonymized': False}
+            
+            r = self._retry_request('post', f"{self.supabase_url}/rest/v1/users_inputs", json=data, timeout=10)
+            
+            if r.status_code == 201:
+                result = r.json()
+                if result and len(result) > 0:
+                    input_id = result[0]['id']
+                    logger.info(f"User input inserted: ID={input_id}, consent={consent}")
+                    return input_id
+            
+            logger.error(f"Insert user_input failed: {r.status_code} - {r.text}")
+            return None
+        except Exception as e:
+            logger.error(f"Error inserting user input: {e}")
+            return None
     
     def insert_prediction(self, input_id: int, model_version: str, prediction: str, confidence: float, latency: float) -> int:
         """Insert prediction result to database."""
-        data = {
-            'input_id': input_id,
-            'model_version': model_version,
-            'prediction': prediction,
-            'confidence': confidence,
-            'latency': latency,
-            'feedback_correct': None,
-            'feedback_timestamp': None,
-            'used_for_training': False,
-            'training_split': None
-        }
-        
-        r = self._retry_request('post', f"{self.supabase_url}/rest/v1/predictions", json=data, timeout=10)
-        
-        if r.status_code == 201:
-            prediction_id = r.json()[0]['id']
-            logger.info(f"Prediction inserted: ID={prediction_id}, model={model_version}")
-            return prediction_id
-        
-        raise Exception(f"Insert failed: {r.status_code} - {r.text}")
+        try:
+            data = {
+                'input_id': input_id,
+                'model_version': model_version,
+                'prediction': prediction,
+                'confidence': confidence,
+                'latency': latency,
+                'feedback_correct': None,
+                'feedback_timestamp': None,
+                'used_for_training': False,
+                'training_split': None
+            }
+            
+            r = self._retry_request('post', f"{self.supabase_url}/rest/v1/predictions", json=data, timeout=10)
+            
+            if r.status_code == 201:
+                result = r.json()
+                if result and len(result) > 0:
+                    prediction_id = result[0]['id']
+                    logger.info(f"Prediction inserted: ID={prediction_id}, model={model_version}")
+                    return prediction_id
+            
+            logger.error(f"Insert prediction failed: {r.status_code} - {r.text}")
+            return None
+        except Exception as e:
+            logger.error(f"Error inserting prediction: {e}")
+            return None
     
     def update_prediction_feedback(self, prediction_id: int, feedback_correct: bool) -> bool:
         """Update feedback for a prediction."""

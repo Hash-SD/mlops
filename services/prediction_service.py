@@ -118,8 +118,8 @@ class PredictionService:
             int: prediction_id if successful, None otherwise
         """
         try:
-            # Ensure database connection is active
-            if not self.db_manager.connection:
+            # Ensure database connection is active (only for DatabaseManager with connection attr)
+            if hasattr(self.db_manager, 'connection') and not self.db_manager.connection:
                 self.logger.info("Reconnecting to database...")
                 self.db_manager.connect()
             
@@ -155,9 +155,10 @@ class PredictionService:
             
         except Exception as e:
             self.logger.error(f"Failed to log prediction: {e}", exc_info=True)
-            # Try to reconnect for next attempt
-            try:
-                self.db_manager.connect()
-            except Exception:
-                pass
+            # Try to reconnect for next attempt (only for DatabaseManager)
+            if hasattr(self.db_manager, 'connect'):
+                try:
+                    self.db_manager.connect()
+                except Exception:
+                    pass
             return None

@@ -18,8 +18,12 @@ def anonymize_pii(text: str) -> Tuple[str, bool]:
     
     Returns:
         Tuple of (anonymized_text, has_pii)
+        - Returns ("", False) if text is None or not a string
     """
-    if not text or not isinstance(text, str):
+    if text is None or not isinstance(text, str):
+        return "", False
+    
+    if not text:  # Empty string
         return text, False
     
     anonymized_text = text
