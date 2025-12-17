@@ -131,7 +131,7 @@ def render_admin_login_section() -> bool:
 
 def render_tutorial_section():
     """Render tutorial section for admin."""
-    with st.expander("📚 **Panduan Lengkap Model Management** (Klik untuk membuka)", expanded=False):
+    with st.expander("📚 **Panduan Model Management** (Klik untuk membuka)", expanded=False):
         st.markdown("""
         ### 📖 Panduan Manajemen Model InsighText
         
@@ -224,7 +224,7 @@ def render_tutorial_section():
         """)
     
     # Tutorial Pembuatan Model Section
-    with st.expander("🛠️ **Tutorial Pembuatan Model** (Untuk DevOps & ML Engineer)", expanded=False):
+    with st.expander("🛠️ **Aturan Pembuatan Model** (Klik untuk membuka)", expanded=False):
         st.markdown("""
         ### 🎯 Panduan Teknis Pembuatan Model untuk Sistem InsighText
         
