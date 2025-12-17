@@ -131,7 +131,7 @@ def render_admin_login_section() -> bool:
 
 def render_tutorial_section():
     """Render tutorial section for admin."""
-    with st.expander("📚 **TUTORIAL: Panduan Lengkap Model Management** (Klik untuk membuka)", expanded=False):
+    with st.expander("📚 **Panduan Lengkap Model Management** (Klik untuk membuka)", expanded=False):
         st.markdown("""
         ### 📖 Panduan Manajemen Model InsighText
         
@@ -221,6 +221,290 @@ def render_tutorial_section():
         3. **Gunakan semantic versioning** (v1.0.0, v1.1.0, v2.0.0)
         4. **Monitor feedback** untuk evaluasi model
         5. **Atur rasio data** sesuai kebutuhan (70:30 recommended)
+        """)
+    
+    # Tutorial Pembuatan Model Section
+    with st.expander("🛠️ **Tutorial Pembuatan Model** (Untuk DevOps & ML Engineer)", expanded=False):
+        st.markdown("""
+        ### 🎯 Panduan Teknis Pembuatan Model untuk Sistem InsighText
+        
+        Dokumentasi ini menjelaskan persyaratan teknis, atribut, dan variabel yang harus dipenuhi 
+        agar model kompatibel dengan sistem InsighText.
+        
+        ---
+        
+        ### 📁 Struktur File Model yang Diperlukan
+        
+        ```
+        models/saved_model/          # Untuk Model v1 (Indonesian)
+        ├── model_pipeline.pkl       # [WAJIB] Model Naive Bayes + TF-IDF Pipeline
+        ├── preprocessor.pkl         # [WAJIB] Text Preprocessor object
+        └── training_config.json     # [WAJIB] Konfigurasi & metrik training
+        
+        models/                      # Untuk Model v2 (IMDB English)
+        ├── naive_bayes_imdb.pkl     # [WAJIB] Model Naive Bayes
+        ├── tfidf_vectorizer_imdb.pkl # [WAJIB] TF-IDF Vectorizer terpisah
+        └── model_metadata_imdb.pkl  # [OPSIONAL] Metadata model
+        ```
+        
+        ---
+        
+        ### 🔧 Spesifikasi Model Pipeline (v1 - Indonesian)
+        
+        **Tipe Model:** `sklearn.naive_bayes.MultinomialNB`
+        
+        **Struktur Pipeline yang Diharapkan:**
+        ```python
+        from sklearn.pipeline import Pipeline
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.naive_bayes import MultinomialNB
+        
+        # Model harus berupa Pipeline dengan struktur:
+        model_pipeline = Pipeline([
+            ('tfidf', TfidfVectorizer()),
+            ('classifier', MultinomialNB())
+        ])
+        ```
+        
+        **Method yang HARUS tersedia:**
+        - `model.predict(texts: List[str]) -> np.ndarray` - Prediksi label
+        - `model.predict_proba(texts: List[str]) -> np.ndarray` - Probabilitas per kelas
+        - `model.classes_` - Daftar label kelas
+        
+        **Label Mapping v1 (Indonesian):**
+        ```python
+        LABEL_MAP_V1 = {
+            "negatif": 0,
+            "netral": 1, 
+            "positif": 2
+        }
+        ```
+        
+        ---
+        
+        ### 🔧 Spesifikasi Model v2 (IMDB English)
+        
+        **File Terpisah:**
+        - `naive_bayes_imdb.pkl` - Model MultinomialNB
+        - `tfidf_vectorizer_imdb.pkl` - TfidfVectorizer
+        
+        **Label Mapping v2 (English):**
+        ```python
+        LABEL_MAP_V2 = {
+            "negative": 0,
+            "positive": 1
+        }
+        ```
+        
+        **Cara Prediksi v2:**
+        ```python
+        # Vectorizer dan model terpisah
+        text_tfidf = vectorizer.transform([cleaned_text])
+        prediction_idx = model.predict(text_tfidf)[0]
+        proba = model.predict_proba(text_tfidf)[0]
+        ```
+        
+        ---
+        
+        ### 📝 Format File `training_config.json`
+        
+        ```json
+        {
+            "model_name": "naive_bayes_sentiment_v1",
+            "model_type": "MultinomialNB",
+            "vectorizer_type": "TfidfVectorizer",
+            "version": "v1",
+            "task": "sentiment-analysis",
+            "language": "Indonesian",
+            "labels": ["negatif", "netral", "positif"],
+            "metrics": {
+                "accuracy": 0.85,
+                "f1": 0.82,
+                "precision": 0.83,
+                "recall": 0.81
+            },
+            "best_params": {
+                "alpha": 1.0,
+                "fit_prior": true
+            },
+            "training_info": {
+                "training_samples": 10000,
+                "test_samples": 3000,
+                "train_ratio": 0.7,
+                "trained_at": "2024-01-15T10:30:00"
+            }
+        }
+        ```
+        
+        ---
+        
+        ### 📊 Persyaratan Metrik Minimum
+        
+        | Metrik | Threshold Minimum | Rekomendasi |
+        |--------|-------------------|-------------|
+        | **Accuracy** | ≥ 0.60 (60%) | ≥ 0.75 (75%) |
+        | **F1 Score** | ≥ 0.50 (50%) | ≥ 0.70 (70%) |
+        | **Training Samples** | ≥ 100 | ≥ 1000 |
+        
+        ⚠️ Model dengan metrik di bawah threshold akan **DITOLAK** saat validasi.
+        
+        ---
+        
+        ### 🔄 Spesifikasi Text Preprocessor
+        
+        **Class:** `TextPreprocessor` dari `models/text_preprocessor.py`
+        
+        **Method yang HARUS tersedia:**
+        ```python
+        class TextPreprocessor:
+            def clean_text(self, text: str) -> str:
+                '''Membersihkan dan normalisasi teks'''
+                pass
+            
+            def preprocess(self, text: str) -> str:
+                '''Alias untuk clean_text'''
+                pass
+        ```
+        
+        **Proses Preprocessing yang Dilakukan:**
+        1. Lowercase conversion
+        2. Emoticon handling (→ 'senang'/'sedih')
+        3. URL, mention, hashtag removal
+        4. Email removal
+        5. Special character removal
+        6. Repeated character normalization
+        7. Slang word normalization (Indonesian)
+        8. Whitespace normalization
+        
+        **Contoh Slang Dictionary:**
+        ```python
+        SLANG_DICT = {
+            'gak': 'tidak', 'ga': 'tidak', 'ngga': 'tidak',
+            'yg': 'yang', 'dgn': 'dengan', 'utk': 'untuk',
+            'bgt': 'banget', 'aja': 'saja', 'jg': 'juga',
+            # ... dan lainnya
+        }
+        ```
+        
+        ---
+        
+        ### 🧪 Validasi Model Sebelum Deploy
+        
+        Sistem akan menjalankan validasi berikut:
+        
+        **1. Structure Validation:**
+        ```python
+        required_files = [
+            'model_pipeline.pkl',
+            'preprocessor.pkl', 
+            'training_config.json'
+        ]
+        # Semua file harus ada
+        ```
+        
+        **2. Performance Validation:**
+        ```python
+        min_accuracy = 0.60   # Minimum 60%
+        min_f1_score = 0.50   # Minimum 50%
+        ```
+        
+        **3. Prediction Function Test:**
+        ```python
+        test_inputs = [
+            "Saya sangat senang dengan produk ini",
+            "Ini adalah pengalaman yang buruk",
+            "Informasi cukup netral dan faktual"
+        ]
+        # Model harus bisa memprediksi semua test input
+        ```
+        
+        ---
+        
+        ### 📦 Cara Membuat Model yang Kompatibel
+        
+        **Step 1: Training Model**
+        ```python
+        import pickle
+        from sklearn.pipeline import Pipeline
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.naive_bayes import MultinomialNB
+        from models.text_preprocessor import TextPreprocessor
+        
+        # Preprocess data
+        preprocessor = TextPreprocessor()
+        X_train_clean = [preprocessor.clean_text(t) for t in X_train]
+        
+        # Create pipeline
+        model = Pipeline([
+            ('tfidf', TfidfVectorizer(max_features=10000)),
+            ('classifier', MultinomialNB(alpha=1.0))
+        ])
+        
+        # Train
+        model.fit(X_train_clean, y_train)
+        ```
+        
+        **Step 2: Evaluasi & Simpan Metrik**
+        ```python
+        from sklearn.metrics import accuracy_score, f1_score
+        
+        y_pred = model.predict(X_test_clean)
+        metrics = {
+            'accuracy': accuracy_score(y_test, y_pred),
+            'f1': f1_score(y_test, y_pred, average='weighted')
+        }
+        ```
+        
+        **Step 3: Simpan Model**
+        ```python
+        import json
+        from pathlib import Path
+        
+        output_dir = Path('models/saved_model')
+        output_dir.mkdir(exist_ok=True)
+        
+        # Save model pipeline
+        with open(output_dir / 'model_pipeline.pkl', 'wb') as f:
+            pickle.dump(model, f)
+        
+        # Save preprocessor
+        with open(output_dir / 'preprocessor.pkl', 'wb') as f:
+            pickle.dump(preprocessor, f)
+        
+        # Save config
+        config = {
+            'model_type': 'MultinomialNB',
+            'metrics': metrics,
+            'labels': ['negatif', 'netral', 'positif']
+        }
+        with open(output_dir / 'training_config.json', 'w') as f:
+            json.dump(config, f, indent=2)
+        ```
+        
+        ---
+        
+        ### ⚠️ Checklist Sebelum Upload
+        
+        - [ ] File `model_pipeline.pkl` ada dan valid
+        - [ ] File `preprocessor.pkl` ada dan valid  
+        - [ ] File `training_config.json` ada dengan format benar
+        - [ ] Accuracy ≥ 60%
+        - [ ] F1 Score ≥ 50%
+        - [ ] Model bisa predict test inputs tanpa error
+        - [ ] Label mapping sesuai (v1: negatif/netral/positif, v2: negative/positive)
+        - [ ] Preprocessor memiliki method `clean_text()`
+        
+        ---
+        
+        ### 🔗 Referensi File Sistem
+        
+        | File | Deskripsi |
+        |------|-----------|
+        | `models/model_loader.py` | Multi-model loader (v1 & v2) |
+        | `models/naive_bayes_loader.py` | Loader spesifik Naive Bayes |
+        | `models/text_preprocessor.py` | Text preprocessing |
+        | `models/model_updater.py` | Update & validasi model |
+        | `models/model_archiver.py` | Archive & restore model |
         """)
 
 
