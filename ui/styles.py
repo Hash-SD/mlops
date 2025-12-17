@@ -13,7 +13,7 @@ def load_css():
             --primary: #2563EB;
             --primary-hover: #1D4ED8;
             --secondary: #64748B;
-            --background: #F8FAFC;
+            --background: #FFFFFF;
             --surface: #FFFFFF;
             --text-main: #1E293B;
             --text-muted: #64748B;
