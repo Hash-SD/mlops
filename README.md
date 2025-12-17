@@ -1,4 +1,4 @@
-# 🚀 Sentiment Analysis MLOps Pipeline: Continuous Learning System
+# 💬 InsighText: Continuous Learning MLOps System for Sentiment Analysis
 <!-- Badges: Project tech stack & status -->
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/streamlit-True-orange?logo=streamlit&logoColor=white)](https://streamlit.io/)
