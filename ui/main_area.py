@@ -154,9 +154,9 @@ def render_result_section(prediction_result: Dict[str, Any], db_manager=None):
     # Show database warning if exists
     metadata = prediction_result.get('metadata', {})
     if metadata.get('database_warning'):
-        st.warning(f"⚠️ {metadata['database_warning']} - Feedback tidak tersedia untuk prediksi ini.")
+        st.warning(f"⚠️ {metadata['database_warning']} - Feedback tidak tersedia untuk prediksi ini. Coba refresh halaman atau periksa koneksi database.")
     elif metadata.get('database_info'):
-        st.info(f"ℹ️ {metadata['database_info']}")
+        st.info(f"ℹ️ {metadata['database_info']} - Feedback tidak tersedia.")
     
     # Feedback Section - Only show if user consent is given and prediction was saved
     if prediction_id and st.session_state.get('user_consent', True):

@@ -69,6 +69,7 @@ class PredictionService:
                 prediction_id = self.log_prediction(text, prediction, confidence, latency, model_version, user_consent)
                 if not prediction_id:
                     metadata['database_warning'] = "Gagal menyimpan ke database"
+                    self.logger.error("Database save failed - prediction_id is None")
             else:
                 self.logger.info("User opted out, skipping database logging")
                 metadata['database_info'] = "Data tidak disimpan (pilihan user)"
@@ -112,53 +113,65 @@ class PredictionService:
         consent: bool
     ) -> int:
         """
-        Log prediction to database.
+        Log prediction to database with retry logic.
         
         Returns:
             int: prediction_id if successful, None otherwise
         """
-        try:
-            # Ensure database connection is active (only for DatabaseManager with connection attr)
-            if hasattr(self.db_manager, 'connection') and not self.db_manager.connection:
-                self.logger.info("Reconnecting to database...")
-                self.db_manager.connect()
-            
-            # Check for PII and anonymize if needed
-            processed_text, has_pii = anonymize_pii(text)
-            text_to_save = processed_text if has_pii else text
-            
-            if has_pii:
-                self.logger.info("PII detected and anonymized before saving")
-            
-            # Insert user input
-            input_id = self.db_manager.insert_user_input(text=text_to_save, consent=consent)
-            
-            if not input_id:
-                self.logger.error("Failed to insert user input - no input_id returned")
-                return None
-            
-            # Insert prediction
-            prediction_id = self.db_manager.insert_prediction(
-                input_id=input_id,
-                model_version=model_version,
-                prediction=prediction,
-                confidence=confidence,
-                latency=latency
-            )
-            
-            if not prediction_id:
-                self.logger.error("Failed to insert prediction - no prediction_id returned")
-                return None
-            
-            self.logger.info(f"Prediction logged: input_id={input_id}, prediction_id={prediction_id}, anonymized={has_pii}")
-            return prediction_id
-            
-        except Exception as e:
-            self.logger.error(f"Failed to log prediction: {e}", exc_info=True)
-            # Try to reconnect for next attempt (only for DatabaseManager)
-            if hasattr(self.db_manager, 'connect'):
-                try:
-                    self.db_manager.connect()
-                except Exception:
-                    pass
-            return None
+        max_retries = 2
+        
+        for attempt in range(max_retries):
+            try:
+                # Ensure database connection is active (only for DatabaseManager with connection attr)
+                if hasattr(self.db_manager, 'connection'):
+                    if not self.db_manager.connection:
+                        self.logger.info("Reconnecting to database...")
+                        self.db_manager.connect()
+                    else:
+                        # Test connection is still alive
+                        try:
+                            self.db_manager.execute_query("SELECT 1")
+                        except Exception:
+                            self.logger.warning("Database connection stale, reconnecting...")
+                            self.db_manager.connect()
+                
+                # Check for PII and anonymize if needed
+                processed_text, has_pii = anonymize_pii(text)
+                text_to_save = processed_text if has_pii else text
+                
+                if has_pii:
+                    self.logger.info("PII detected and anonymized before saving")
+                
+                # Insert user input
+                input_id = self.db_manager.insert_user_input(text=text_to_save, consent=consent)
+                
+                if not input_id:
+                    self.logger.error("Failed to insert user input - no input_id returned")
+                    return None
+                
+                # Insert prediction
+                prediction_id = self.db_manager.insert_prediction(
+                    input_id=input_id,
+                    model_version=model_version,
+                    prediction=prediction,
+                    confidence=confidence,
+                    latency=latency
+                )
+                
+                if not prediction_id:
+                    self.logger.error("Failed to insert prediction - no prediction_id returned")
+                    return None
+                
+                self.logger.info(f"Prediction logged: input_id={input_id}, prediction_id={prediction_id}, anonymized={has_pii}")
+                return prediction_id
+                
+            except Exception as e:
+                self.logger.error(f"Failed to log prediction (attempt {attempt + 1}/{max_retries}): {e}", exc_info=True)
+                # Try to reconnect for next attempt (only for DatabaseManager)
+                if hasattr(self.db_manager, 'connect') and attempt < max_retries - 1:
+                    try:
+                        self.db_manager.connect()
+                    except Exception as reconnect_error:
+                        self.logger.error(f"Reconnection failed: {reconnect_error}")
+        
+        return None

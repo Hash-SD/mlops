@@ -49,24 +49,52 @@ def initialize_session_state():
 @st.cache_resource
 def initialize_resources():
     """Initialize DB and Model Loader (cached resource)."""
+    db_manager = None
+    db_type_used = "unknown"
+    
     # Database initialization
     try:
         if settings.is_supabase():
-            if not settings.SUPABASE_URL or not settings.SUPABASE_KEY:
-                raise ValueError("Missing Supabase credentials")
+            logger.info("Attempting to connect to Supabase...")
+            
+            # Validate credentials
+            if not settings.SUPABASE_URL or settings.SUPABASE_URL == "https://your-project-id.supabase.co":
+                raise ValueError("SUPABASE_URL not configured - please update .env file")
+            if not settings.SUPABASE_KEY or settings.SUPABASE_KEY == "your_supabase_anon_key_here":
+                raise ValueError("SUPABASE_KEY not configured - please update .env file")
+            
             db_manager = SupabaseDatabaseManager(settings.SUPABASE_URL, settings.SUPABASE_KEY)
             if not db_manager.connect():
-                raise Exception("Failed to connect to Supabase")
+                raise Exception("Failed to connect to Supabase - check URL and API key")
+            
+            db_type_used = "supabase"
+            logger.info("Successfully connected to Supabase")
         else:
             db_manager = DatabaseManager(settings.get_database_path())
             db_manager.connect()
             db_manager.initialize_schema()
+            db_type_used = "sqlite"
+            logger.info(f"Successfully connected to SQLite: {settings.get_database_path()}")
+            
     except Exception as e:
-        logger.error(f"DB Init failed: {e}")
-        # Fallback to SQLite
-        db_manager = DatabaseManager("mlops_app.db")
-        db_manager.connect()
-        db_manager.initialize_schema()
+        logger.error(f"Primary DB Init failed: {e}")
+        
+        # Fallback to SQLite only if not already using SQLite
+        if db_type_used != "sqlite":
+            logger.warning("Falling back to SQLite database...")
+            try:
+                db_manager = DatabaseManager("mlops_app.db")
+                db_manager.connect()
+                db_manager.initialize_schema()
+                db_type_used = "sqlite_fallback"
+                logger.info("Fallback to SQLite successful")
+            except Exception as fallback_error:
+                logger.error(f"SQLite fallback also failed: {fallback_error}")
+                raise
+    
+    # Store db type in session for UI feedback
+    if 'db_type' not in st.session_state:
+        st.session_state['db_type'] = db_type_used
     
     # Model Loader initialization
     try:
